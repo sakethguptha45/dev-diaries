@@ -72,6 +72,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                 <p className="text-xs text-green-700">
                   After clicking the link, you will be redirected back to the login page where you can sign in to your new account.
                 </p>
+                <p className="text-xs text-green-600 mt-2">
+                  <strong>Note:</strong> The verification link will redirect you to http://localhost:5173 (this application).
+                </p>
               </div>
               
               <button

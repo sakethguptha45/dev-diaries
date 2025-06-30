@@ -28,33 +28,63 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   // Check for email verification success on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    
+    // Check URL parameters first
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
     const error = urlParams.get('error');
     const errorDescription = urlParams.get('error_description');
     
+    // Also check hash parameters (Supabase sometimes uses hash)
+    const hashParams = new URLSearchParams(hash.substring(1));
+    const hashAccessToken = hashParams.get('access_token');
+    const hashRefreshToken = hashParams.get('refresh_token');
+    const hashType = hashParams.get('type');
+    const hashError = hashParams.get('error');
+    const hashErrorDescription = hashParams.get('error_description');
+    
+    // Use either URL params or hash params
+    const finalAccessToken = accessToken || hashAccessToken;
+    const finalRefreshToken = refreshToken || hashRefreshToken;
+    const finalType = type || hashType;
+    const finalError = error || hashError;
+    const finalErrorDescription = errorDescription || hashErrorDescription;
+    
+    console.log('URL check:', {
+      finalAccessToken: finalAccessToken ? 'present' : 'missing',
+      finalRefreshToken: finalRefreshToken ? 'present' : 'missing',
+      finalType,
+      finalError,
+      finalErrorDescription
+    });
+    
     // Check if this is an email confirmation redirect
-    if (type === 'signup' && accessToken && refreshToken && !error) {
+    if (finalType === 'signup' && finalAccessToken && finalRefreshToken && !finalError) {
+      console.log('Email verification successful, showing success message');
       setShowVerificationSuccess(true);
       
-      // Clear URL parameters to clean up the URL
+      // Clear URL parameters and hash to clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
       
-      // Hide success message after 3 seconds with fade out
+      // Hide success message after 3 seconds
       const timer = setTimeout(() => {
         setShowVerificationSuccess(false);
       }, 3000);
       
       return () => clearTimeout(timer);
-    } else if (error) {
+    } else if (finalError) {
       // Handle verification errors
-      if (errorDescription?.includes('expired') || errorDescription?.includes('invalid')) {
+      console.log('Email verification error:', finalError, finalErrorDescription);
+      if (finalErrorDescription?.includes('expired') || finalErrorDescription?.includes('invalid') || finalError === 'access_denied') {
         setError('The verification link has expired or is invalid. Please try registering again.');
+      } else {
+        setError('There was an issue with email verification. Please try again.');
       }
       
-      // Clear error parameters from URL
+      // Clear error parameters from URL and hash
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }

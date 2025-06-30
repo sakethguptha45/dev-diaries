@@ -112,8 +112,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Get the current origin for redirect URL - use the actual app URL
-      const redirectUrl = window.location.origin;
+      // Use the correct Vite dev server URL for development
+      const isDevelopment = import.meta.env.DEV;
+      const redirectUrl = isDevelopment 
+        ? 'http://localhost:5173' 
+        : window.location.origin;
+
+      console.log('Using redirect URL:', redirectUrl);
 
       const { data, error } = await supabase.auth.signUp({
         email,
