@@ -6,6 +6,7 @@ import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EditorPage } from './pages/EditorPage';
 import { EmailVerificationPage } from './pages/EmailVerificationPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 function App() {
   const { isAuthenticated, loading, user, initialize } = useAuthStore();
@@ -35,8 +36,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Email verification route - accessible without authentication */}
+        {/* Public routes */}
         <Route path="/verify-email" element={<EmailVerificationPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         
         {/* Protected routes */}
         {isAuthenticated ? (
