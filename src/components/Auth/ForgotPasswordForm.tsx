@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, ArrowLeft, CheckCircle, AlertCircle, Clock, RefreshCw } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { ForgotPasswordVerificationForm } from './ForgotPasswordVerificationForm';
+import { NewPasswordForm } from './NewPasswordForm';
 
 interface ForgotPasswordFormData {
   email: string;
@@ -12,13 +14,13 @@ interface ForgotPasswordFormProps {
   onBack: () => void;
 }
 
+type Step = 'email' | 'verification' | 'newPassword' | 'success';
+
 export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
+  const [currentStep, setCurrentStep] = useState<Step>('email');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
-  const [canResend, setCanResend] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(0);
 
   const {
     register,
@@ -26,31 +28,16 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
     formState: { errors }
   } = useForm<ForgotPasswordFormData>();
 
-  const startCooldownTimer = () => {
-    setCanResend(false);
-    setTimeRemaining(60); // 1 minute cooldown
-
-    const timer = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setCanResend(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setLoading(true);
     setError('');
 
     try {
-      console.log('🔄 Sending password reset email to:', data.email);
+      console.log('🔄 Sending password reset verification code to:', data.email);
 
+      // Send password reset with OTP (no redirect URL to force OTP)
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: undefined // This forces OTP instead of magic link
       });
 
       if (error) {
@@ -58,19 +45,15 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
         
         if (error.message.includes('rate limit')) {
           setError('Too many requests. Please wait a moment before trying again.');
-        } else if (error.message.includes('not found')) {
-          // For security, we don't reveal if email exists or not
-          setSuccess(true);
-          setEmail(data.email);
-          startCooldownTimer();
         } else {
-          setError(error.message);
+          // For security, we don't reveal if email exists or not
+          setEmail(data.email);
+          setCurrentStep('verification');
         }
       } else {
-        console.log('✅ Password reset email sent successfully');
-        setSuccess(true);
+        console.log('✅ Password reset verification code sent successfully');
         setEmail(data.email);
-        startCooldownTimer();
+        setCurrentStep('verification');
       }
     } catch (error) {
       console.error('Password reset error:', error);
@@ -80,38 +63,42 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
     }
   };
 
-  const handleResend = async () => {
-    if (!canResend || !email) return;
+  const handleVerificationSuccess = () => {
+    setCurrentStep('newPassword');
+  };
 
-    setLoading(true);
+  const handlePasswordUpdateSuccess = () => {
+    setCurrentStep('success');
+  };
+
+  const handleBackToEmail = () => {
+    setCurrentStep('email');
+    setEmail('');
     setError('');
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        startCooldownTimer();
-        // Show brief success message
-        const originalError = error;
-        setError('');
-        setTimeout(() => setError(''), 3000);
-      }
-    } catch (error) {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const formatTime = (seconds: number): string => {
-    return `${seconds}s`;
-  };
+  // Verification step
+  if (currentStep === 'verification') {
+    return (
+      <ForgotPasswordVerificationForm
+        email={email}
+        onBack={handleBackToEmail}
+        onVerified={handleVerificationSuccess}
+      />
+    );
+  }
 
-  if (success) {
+  // New password step
+  if (currentStep === 'newPassword') {
+    return (
+      <NewPasswordForm
+        onSuccess={handlePasswordUpdateSuccess}
+      />
+    );
+  }
+
+  // Success step
+  if (currentStep === 'success') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4">
         <motion.div
@@ -128,72 +115,32 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
             >
               <CheckCircle className="h-8 w-8 text-white" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-gray-600">We've sent password reset instructions to</p>
-            <p className="font-semibold text-emerald-600 break-all">{email}</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Password Updated!</h2>
+            <p className="text-gray-600">Your password has been successfully changed</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-            <div className="space-y-6">
-              {/* Instructions */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Mail className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-emerald-900 mb-2">📧 Next steps:</p>
-                    <div className="text-emerald-800 space-y-1">
-                      <p>1. Check your email inbox (and spam folder)</p>
-                      <p>2. Click the "Reset Password" link in the email</p>
-                      <p>3. Create your new password</p>
-                      <p>4. Sign in with your new password</p>
-                    </div>
-                  </div>
+            <div className="text-center space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800 font-medium mb-2">
+                  🎉 Success! Your password has been updated.
+                </p>
+                <div className="text-xs text-green-700 space-y-1">
+                  <p>✓ Your account is now secure with your new password</p>
+                  <p>✓ You can now sign in with your new credentials</p>
+                  <p>✓ Make sure to keep your password safe</p>
                 </div>
               </div>
-
-              {/* Security Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">🔒 Security Notice</p>
-                  <p>The reset link will expire in 1 hour for your security. If you don't see the email within a few minutes, check your spam folder.</p>
-                </div>
-              </div>
-
-              {/* Resend Option */}
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-3">Didn't receive the email?</p>
-                
-                {canResend ? (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleResend}
-                    disabled={loading}
-                    className="inline-flex items-center space-x-2 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 transition-all duration-200"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    <span>{loading ? 'Sending...' : 'Resend Email'}</span>
-                  </motion.button>
-                ) : (
-                  <div className="flex items-center justify-center space-x-2 text-gray-500">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm">
-                      Resend available in {formatTime(timeRemaining)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Back to Login */}
-              <div className="text-center pt-4 border-t border-gray-200">
-                <button
-                  onClick={onBack}
-                  className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span>Back to sign in</span>
-                </button>
-              </div>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onBack}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/25 transition-all duration-300"
+              >
+                Sign in with new password
+                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+              </motion.button>
             </div>
           </div>
         </motion.div>
@@ -201,6 +148,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
     );
   }
 
+  // Email input step (default)
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-red-50 px-4">
       <motion.div
@@ -215,13 +163,39 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="mx-auto h-16 w-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg"
           >
-            <Mail className="h-8 w-8 text-white" />
+            <KeyRound className="h-8 w-8 text-white" />
           </motion.div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Forgot your password?</h2>
-          <p className="text-gray-600">No worries! Enter your email and we'll send you reset instructions</p>
+          <p className="text-gray-600">Enter your email to receive a verification code</p>
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          {/* Information Notice */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <div className="text-sm">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">📧</span>
+                </div>
+                <p className="font-semibold text-blue-900">Password Reset Process</p>
+              </div>
+              <div className="text-blue-800 space-y-2 text-xs">
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>1. Verification code:</strong> You'll receive a 6-digit code via email
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>2. Code expires in 10 minutes:</strong> Enter it quickly
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>3. Create new password:</strong> Must be different from previous
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>4. Sign in:</strong> Use your new password to access your account
+                </div>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Error Message */}
             <AnimatePresence>
@@ -261,17 +235,20 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                💡 Use the same email you used to create your account
+              </p>
             </div>
 
             {/* Security Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">🔒 How this works:</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-1">🔒 Security Notice:</p>
                 <div className="space-y-1 text-xs">
-                  <p>• We'll send a secure reset link to your email</p>
-                  <p>• The link expires in 1 hour for security</p>
-                  <p>• You'll be able to create a new password</p>
-                  <p>• Your account will remain secure throughout</p>
+                  <p>• We'll send a 6-digit verification code to your email</p>
+                  <p>• The code expires in 10 minutes for security</p>
+                  <p>• Your new password must be different from your previous one</p>
+                  <p>• Check your spam folder if you don't see the email</p>
                 </div>
               </div>
             </div>
@@ -287,10 +264,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Sending reset email...</span>
+                  <span>Sending verification code...</span>
                 </div>
               ) : (
-                'Send Reset Instructions'
+                'Send Verification Code'
               )}
             </motion.button>
 
