@@ -1,32 +1,37 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { useCardStore } from './store/cardStore';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EditorPage } from './pages/EditorPage';
 
 function App() {
-  const { isAuthenticated, pendingVerification, logout } = useAuthStore();
+  const { isAuthenticated, loading, user, initialize } = useAuthStore();
+  const { loadUserCards } = useCardStore();
 
-  // Clean up any invalid states on app load
   useEffect(() => {
-    const state = useAuthStore.getState();
-    
-    // If we have pendingVerification but no verificationEmail, reset the state
-    if (state.pendingVerification && !state.verificationEmail) {
-      console.log('Cleaning up invalid verification state');
-      logout();
-    }
-    
-    // If we're authenticated but have pendingVerification, clear it
-    if (state.isAuthenticated && state.pendingVerification) {
-      console.log('Cleaning up conflicting auth state');
-      useAuthStore.setState({ pendingVerification: false, verificationEmail: '' });
-    }
-  }, [logout]);
+    initialize();
+  }, [initialize]);
 
-  // Show auth page if not authenticated or if pending verification
-  if (!isAuthenticated || pendingVerification) {
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadUserCards(user.id);
+    }
+  }, [isAuthenticated, user, loadUserCards]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-300">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return <AuthPage />;
   }
 

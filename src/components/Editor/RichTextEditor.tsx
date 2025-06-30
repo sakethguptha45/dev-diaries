@@ -14,11 +14,11 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
-import { createLowlight } from 'lowlight';
+import { createLowlight, common } from 'lowlight';
 import { EditorToolbar } from './EditorToolbar';
 
-// Create lowlight instance
-const lowlight = createLowlight();
+// Create lowlight instance with common languages
+const lowlight = createLowlight(common);
 
 interface RichTextEditorProps {
   content: string;
@@ -36,19 +36,27 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: false,
+        codeBlock: false, // We'll use CodeBlockLowlight instead
       }),
       CodeBlockLowlight.configure({
         lowlight,
         defaultLanguage: 'javascript',
+        HTMLAttributes: {
+          class: 'bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto',
+        },
       }),
-      Color,
+      Color.configure({
+        types: ['textStyle'],
+      }),
       TextStyle,
       FontFamily.configure({
         types: ['textStyle'],
       }),
       Highlight.configure({
         multicolor: true,
+        HTMLAttributes: {
+          class: 'bg-yellow-200 px-1 rounded',
+        },
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
@@ -57,20 +65,35 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-600 underline hover:text-blue-800 transition-colors',
+          class: 'text-blue-600 underline hover:text-blue-800 transition-colors cursor-pointer',
         },
       }),
       Image.configure({
         HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-lg shadow-sm',
+          class: 'max-w-full h-auto rounded-lg shadow-sm my-4',
         },
       }),
       Table.configure({
         resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full my-4',
+        },
       }),
-      TableRow,
-      TableHeader,
-      TableCell,
+      TableRow.configure({
+        HTMLAttributes: {
+          class: 'border-b border-gray-200',
+        },
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 px-4 py-2 bg-gray-50 font-semibold text-left',
+        },
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 px-4 py-2',
+        },
+      }),
     ],
     content,
     editable,
@@ -82,6 +105,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     editorProps: {
       attributes: {
         class: `prose prose-lg max-w-none focus:outline-none ${editable ? 'min-h-[500px]' : 'min-h-[200px]'} p-6`,
+        style: 'white-space: pre-wrap;',
       },
     },
   });
