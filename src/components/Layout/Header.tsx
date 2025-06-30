@@ -85,16 +85,13 @@ export const Header: React.FC = () => {
               <div className="relative group">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
-                  className="flex items-center space-x-3 p-2 rounded-xl hover:bg-slate-800/50 transition-all duration-200"
+                  className="flex items-center p-2 rounded-xl hover:bg-slate-800/50 transition-all duration-200"
                 >
                   <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
                     <span className="text-white text-sm font-semibold">
                       {user?.name ? getInitials(user.name) : <User className="h-5 w-5" />}
                     </span>
                   </div>
-                  <span className="hidden md:block text-sm font-medium text-slate-300">
-                    {user?.name}
-                  </span>
                 </motion.button>
 
                 {/* Dropdown Menu - Positioned from right edge */}
