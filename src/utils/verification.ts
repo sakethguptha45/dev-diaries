@@ -4,6 +4,7 @@ export interface VerificationAttempt {
   timestamp: Date;
   ip?: string;
   success: boolean;
+  userAgent?: string;
 }
 
 export interface VerificationSession {
@@ -15,6 +16,8 @@ export interface VerificationSession {
   createdAt: Date;
   isLocked: boolean;
   lockUntil?: Date;
+  resendCount: number;
+  lastResendAt?: Date;
 }
 
 class VerificationManager {
@@ -22,22 +25,36 @@ class VerificationManager {
   private readonly MAX_ATTEMPTS = 3;
   private readonly CODE_EXPIRY_MINUTES = 5;
   private readonly LOCK_DURATION_MINUTES = 15;
-  private readonly RESEND_COOLDOWN_MINUTES = 1;
+  private readonly RESEND_COOLDOWN_SECONDS = 60;
   private readonly RATE_LIMIT_WINDOW_MINUTES = 10;
   private readonly MAX_REQUESTS_PER_WINDOW = 5;
+  private readonly MAX_RESENDS_PER_SESSION = 3;
 
   generateCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure 6-digit code
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    const code = (array[0] % 900000 + 100000).toString();
+    return code;
   }
 
   hashCode(code: string): string {
-    return crypto.createHash('sha256').update(code).digest('hex');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(code + 'dev-diaries-salt'); // Add salt for security
+    return crypto.subtle.digest('SHA-256', data).then(hash => {
+      return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    });
   }
 
-  createSession(email: string): { code: string; session: VerificationSession } {
+  async createSession(email: string): Promise<{ code: string; session: VerificationSession }> {
     const code = this.generateCode();
-    const hashedCode = this.hashCode(code);
+    const hashedCode = await this.hashCode(code);
     const expiresAt = new Date(Date.now() + this.CODE_EXPIRY_MINUTES * 60 * 1000);
+
+    // Clean up any existing session for this email
+    this.sessions.delete(email);
 
     const session: VerificationSession = {
       email,
@@ -47,14 +64,28 @@ class VerificationManager {
       attempts: [],
       createdAt: new Date(),
       isLocked: false,
+      resendCount: 0,
     };
 
     this.sessions.set(email, session);
+    
+    // Log session creation for security audit
+    console.log(`🔐 Verification session created for ${email} at ${new Date().toISOString()}`);
+    
     return { code, session };
   }
 
   getSession(email: string): VerificationSession | null {
-    return this.sessions.get(email) || null;
+    const session = this.sessions.get(email);
+    if (!session) return null;
+
+    // Auto-cleanup expired sessions
+    if (this.isSessionExpired(session) && !this.isSessionLocked(session)) {
+      this.sessions.delete(email);
+      return null;
+    }
+
+    return session;
   }
 
   isSessionExpired(session: VerificationSession): boolean {
@@ -65,43 +96,75 @@ class VerificationManager {
     if (!session.isLocked || !session.lockUntil) return false;
     
     if (new Date() > session.lockUntil) {
-      // Unlock the session
+      // Auto-unlock the session
       session.isLocked = false;
       session.lockUntil = undefined;
       session.attempts = [];
+      console.log(`🔓 Session auto-unlocked for ${session.email}`);
       return false;
     }
     
     return true;
   }
 
-  canResendCode(session: VerificationSession): boolean {
-    if (this.isSessionLocked(session)) return false;
+  canResendCode(session: VerificationSession): { canResend: boolean; reason?: string; waitTime?: number } {
+    if (this.isSessionLocked(session)) {
+      return { 
+        canResend: false, 
+        reason: 'Account is temporarily locked',
+        waitTime: session.lockUntil ? Math.max(0, session.lockUntil.getTime() - Date.now()) : 0
+      };
+    }
+
+    if (session.resendCount >= this.MAX_RESENDS_PER_SESSION) {
+      return { 
+        canResend: false, 
+        reason: 'Maximum resend attempts reached for this session'
+      };
+    }
     
-    const lastAttempt = session.attempts[session.attempts.length - 1];
-    if (!lastAttempt) return true;
-    
-    const cooldownEnd = new Date(lastAttempt.timestamp.getTime() + this.RESEND_COOLDOWN_MINUTES * 60 * 1000);
-    return new Date() > cooldownEnd;
+    if (session.lastResendAt) {
+      const cooldownEnd = new Date(session.lastResendAt.getTime() + this.RESEND_COOLDOWN_SECONDS * 1000);
+      const now = new Date();
+      
+      if (now < cooldownEnd) {
+        return { 
+          canResend: false, 
+          reason: 'Please wait before requesting another code',
+          waitTime: cooldownEnd.getTime() - now.getTime()
+        };
+      }
+    }
+
+    return { canResend: true };
   }
 
-  checkRateLimit(email: string): boolean {
+  checkRateLimit(email: string): { allowed: boolean; reason?: string; resetTime?: Date } {
     const session = this.getSession(email);
-    if (!session) return true;
+    if (!session) return { allowed: true };
 
     const windowStart = new Date(Date.now() - this.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
     const recentAttempts = session.attempts.filter(attempt => attempt.timestamp > windowStart);
     
-    return recentAttempts.length < this.MAX_REQUESTS_PER_WINDOW;
+    if (recentAttempts.length >= this.MAX_REQUESTS_PER_WINDOW) {
+      const resetTime = new Date(recentAttempts[0].timestamp.getTime() + this.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
+      return { 
+        allowed: false, 
+        reason: 'Rate limit exceeded',
+        resetTime
+      };
+    }
+
+    return { allowed: true };
   }
 
-  verifyCode(email: string, inputCode: string, ip?: string): { 
+  async verifyCode(email: string, inputCode: string, ip?: string, userAgent?: string): Promise<{ 
     success: boolean; 
     message: string; 
     attemptsRemaining?: number;
     isLocked?: boolean;
     lockUntil?: Date;
-  } {
+  }> {
     const session = this.getSession(email);
     
     if (!session) {
@@ -114,33 +177,41 @@ class VerificationManager {
     }
 
     if (this.isSessionLocked(session)) {
+      const waitTime = session.lockUntil ? Math.ceil((session.lockUntil.getTime() - Date.now()) / 60000) : 0;
       return { 
         success: false, 
-        message: `Account is temporarily locked. Try again after ${session.lockUntil?.toLocaleTimeString()}.`,
+        message: `Account is temporarily locked. Try again in ${waitTime} minutes.`,
         isLocked: true,
         lockUntil: session.lockUntil
       };
     }
 
     // Check rate limiting
-    if (!this.checkRateLimit(email)) {
-      return { success: false, message: 'Too many attempts. Please try again later.' };
+    const rateLimit = this.checkRateLimit(email);
+    if (!rateLimit.allowed) {
+      return { success: false, message: rateLimit.reason || 'Too many attempts. Please try again later.' };
     }
 
-    const hashedInput = this.hashCode(inputCode);
+    // Verify the code
+    const hashedInput = await this.hashCode(inputCode);
     const isValid = hashedInput === session.hashedCode;
 
     // Record the attempt
     const attempt: VerificationAttempt = {
       timestamp: new Date(),
       ip,
+      userAgent,
       success: isValid,
     };
     session.attempts.push(attempt);
 
+    // Log attempt for security audit
+    console.log(`🔍 Verification attempt for ${email}: ${isValid ? 'SUCCESS' : 'FAILED'} at ${attempt.timestamp.toISOString()}`);
+
     if (isValid) {
       // Success - clean up session
       this.sessions.delete(email);
+      console.log(`✅ Email verified successfully for ${email}`);
       return { success: true, message: 'Email verified successfully!' };
     }
 
@@ -153,6 +224,8 @@ class VerificationManager {
       session.isLocked = true;
       session.lockUntil = new Date(Date.now() + this.LOCK_DURATION_MINUTES * 60 * 1000);
       
+      console.log(`🔒 Account locked for ${email} until ${session.lockUntil.toISOString()}`);
+      
       return { 
         success: false, 
         message: `Too many failed attempts. Account locked for ${this.LOCK_DURATION_MINUTES} minutes.`,
@@ -164,12 +237,12 @@ class VerificationManager {
 
     return { 
       success: false, 
-      message: `Invalid verification code. ${attemptsRemaining} attempts remaining.`,
+      message: `Invalid verification code. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`,
       attemptsRemaining
     };
   }
 
-  resendCode(email: string): { success: boolean; message: string; code?: string } {
+  async resendCode(email: string): Promise<{ success: boolean; message: string; code?: string }> {
     const session = this.getSession(email);
     
     if (!session) {
@@ -177,30 +250,40 @@ class VerificationManager {
     }
 
     if (this.isSessionLocked(session)) {
+      const waitTime = session.lockUntil ? Math.ceil((session.lockUntil.getTime() - Date.now()) / 60000) : 0;
       return { 
         success: false, 
-        message: `Account is temporarily locked. Try again after ${session.lockUntil?.toLocaleTimeString()}.`
+        message: `Account is temporarily locked. Try again in ${waitTime} minutes.`
       };
     }
 
-    if (!this.canResendCode(session)) {
+    const resendCheck = this.canResendCode(session);
+    if (!resendCheck.canResend) {
+      if (resendCheck.waitTime) {
+        const waitSeconds = Math.ceil(resendCheck.waitTime / 1000);
+        return { 
+          success: false, 
+          message: `Please wait ${waitSeconds} seconds before requesting a new code.`
+        };
+      }
       return { 
         success: false, 
-        message: `Please wait ${this.RESEND_COOLDOWN_MINUTES} minute(s) before requesting a new code.`
+        message: resendCheck.reason || 'Cannot resend code at this time.'
       };
     }
 
     // Generate new code
     const newCode = this.generateCode();
     session.code = newCode;
-    session.hashedCode = this.hashCode(newCode);
+    session.hashedCode = await this.hashCode(newCode);
     session.expiresAt = new Date(Date.now() + this.CODE_EXPIRY_MINUTES * 60 * 1000);
+    session.resendCount++;
+    session.lastResendAt = new Date();
     
-    // Record resend attempt
-    session.attempts.push({
-      timestamp: new Date(),
-      success: false, // Resend is not a verification attempt
-    });
+    // Reset failed attempts on resend
+    session.attempts = session.attempts.filter(a => a.success);
+
+    console.log(`🔄 Code resent for ${email} (resend #${session.resendCount})`);
 
     return { 
       success: true, 
@@ -224,18 +307,79 @@ class VerificationManager {
     return Math.max(0, this.MAX_ATTEMPTS - failedAttempts);
   }
 
+  getSessionStats(email: string): {
+    exists: boolean;
+    timeRemaining: number;
+    attemptsRemaining: number;
+    resendCount: number;
+    isLocked: boolean;
+    canResend: boolean;
+  } {
+    const session = this.getSession(email);
+    
+    if (!session) {
+      return {
+        exists: false,
+        timeRemaining: 0,
+        attemptsRemaining: this.MAX_ATTEMPTS,
+        resendCount: 0,
+        isLocked: false,
+        canResend: false,
+      };
+    }
+
+    return {
+      exists: true,
+      timeRemaining: this.getTimeRemaining(email),
+      attemptsRemaining: this.getAttemptsRemaining(email),
+      resendCount: session.resendCount,
+      isLocked: this.isSessionLocked(session),
+      canResend: this.canResendCode(session).canResend,
+    };
+  }
+
   cleanup(): void {
     const now = new Date();
+    let cleanedCount = 0;
+    
     for (const [email, session] of this.sessions.entries()) {
       if (this.isSessionExpired(session) && !this.isSessionLocked(session)) {
         this.sessions.delete(email);
+        cleanedCount++;
       }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedCount} expired verification sessions`);
     }
   }
 
-  // Clean up expired sessions every 5 minutes
+  // Enhanced cleanup with detailed logging
   startCleanupInterval(): void {
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    setInterval(() => {
+      this.cleanup();
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    console.log('🔄 Verification session cleanup interval started');
+  }
+
+  // Get all active sessions (for admin/debugging)
+  getActiveSessions(): Array<{
+    email: string;
+    createdAt: Date;
+    expiresAt: Date;
+    attempts: number;
+    isLocked: boolean;
+    resendCount: number;
+  }> {
+    return Array.from(this.sessions.entries()).map(([email, session]) => ({
+      email,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      attempts: session.attempts.length,
+      isLocked: session.isLocked,
+      resendCount: session.resendCount,
+    }));
   }
 }
 

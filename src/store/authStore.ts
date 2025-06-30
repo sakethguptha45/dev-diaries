@@ -121,20 +121,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
+      // Validate email format first
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return { 
+          success: false, 
+          errorMessage: 'Please enter a valid email address.' 
+        };
+      }
+
       // Check if Supabase is properly configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
         return { 
           success: false, 
-          errorMessage: 'Supabase is not properly configured. Please check your environment variables.' 
+          errorMessage: 'Service is not properly configured. Please contact support.' 
         };
       }
 
-      // Get the current URL and construct the redirect URL
-      const currentUrl = window.location.origin;
-      const redirectUrl = `${currentUrl}/verify-email`;
-
-      console.log('Using redirect URL for email verification:', redirectUrl);
-
+      // For our custom verification flow, we'll disable Supabase's email confirmation
+      // and handle verification ourselves
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -142,7 +147,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: {
             name: name,
           },
-          emailRedirectTo: redirectUrl,
+          // Disable Supabase email confirmation since we're handling it ourselves
+          emailRedirectTo: undefined,
         },
       });
 
@@ -157,30 +163,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           };
         }
         
+        if (error.message.includes('already registered')) {
+          return { 
+            success: false, 
+            errorMessage: 'An account with this email already exists. Please sign in instead.' 
+          };
+        }
+        
         return { success: false, errorMessage: error.message };
       }
 
       if (data.user) {
-        // Check if email confirmation is required
-        if (!data.session) {
-          // Start verification process
-          await get().sendVerificationCode(email);
-          return { success: true, needsVerification: true };
-        }
-
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || name,
-          isEmailVerified: data.user.email_confirmed_at !== null,
-          createdAt: new Date(data.user.created_at)
-        };
-        
-        set({ 
-          user, 
-          isAuthenticated: true 
-        });
-        return { success: true, needsVerification: false };
+        // Always require verification for new accounts
+        return { success: true, needsVerification: true };
       }
 
       return { success: false, errorMessage: 'Registration failed. Please try again.' };
@@ -191,11 +186,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         return { 
           success: false, 
-          errorMessage: 'Unable to connect to the server. Please check your internet connection and Supabase configuration.' 
+          errorMessage: 'Unable to connect to the server. Please check your internet connection.' 
         };
       }
       
-      return { success: false, errorMessage: 'An error occurred. Please try again.' };
+      return { success: false, errorMessage: 'An unexpected error occurred. Please try again.' };
     }
   },
 
@@ -214,43 +209,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   sendVerificationCode: async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return { success: false, message: 'Invalid email address format.' };
+      }
+
       // Check rate limiting
-      if (!verificationManager.checkRateLimit(email)) {
-        return { success: false, message: 'Too many requests. Please try again later.' };
+      const rateLimit = verificationManager.checkRateLimit(email);
+      if (!rateLimit.allowed) {
+        const resetTime = rateLimit.resetTime ? new Date(rateLimit.resetTime).toLocaleTimeString() : '';
+        return { 
+          success: false, 
+          message: `Too many requests. Please try again ${resetTime ? `after ${resetTime}` : 'later'}.` 
+        };
       }
 
       // Create verification session
-      const { code } = verificationManager.createSession(email);
+      const { code } = await verificationManager.createSession(email);
       
       // Send email
       const emailService = EmailService.getInstance();
       const emailSent = await emailService.sendVerificationCode(email, code);
       
       if (!emailSent) {
-        return { success: false, message: 'Failed to send verification email.' };
+        return { success: false, message: 'Failed to send verification email. Please check your email address and try again.' };
       }
 
-      // Start timer
+      // Start timer and update state
       const startTimer = () => {
         const updateTimer = () => {
-          const timeRemaining = verificationManager.getTimeRemaining(email);
-          const attemptsRemaining = verificationManager.getAttemptsRemaining(email);
-          const session = verificationManager.getSession(email);
+          const stats = verificationManager.getSessionStats(email);
           
           set(state => ({
             verification: {
               ...state.verification,
               isVerifying: true,
               email,
-              timeRemaining,
-              attempts: session ? session.attempts.filter(a => !a.success).length : 0,
-              canResend: timeRemaining === 0,
-              isLocked: session ? verificationManager.isSessionLocked(session) : false,
-              lockUntil: session?.lockUntil || null,
+              timeRemaining: stats.timeRemaining,
+              attempts: 3 - stats.attemptsRemaining,
+              canResend: stats.canResend && stats.timeRemaining === 0,
+              isLocked: stats.isLocked,
+              lockUntil: null, // Will be set by verify/resend functions if needed
+              lastCodeSent: new Date(),
             }
           }));
 
-          if (timeRemaining > 0) {
+          if (stats.timeRemaining > 0) {
             setTimeout(updateTimer, 1000);
           }
         };
@@ -259,10 +264,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       startTimer();
       
-      return { success: true, message: 'Verification code sent successfully!' };
+      return { success: true, message: 'Verification code sent successfully! Please check your email.' };
     } catch (error) {
       console.error('Error sending verification code:', error);
-      return { success: false, message: 'Failed to send verification code.' };
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to send verification code. Please try again.' 
+      };
     }
   },
 
@@ -270,7 +278,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      const result = verificationManager.verifyCode(verification.email, code);
+      if (!verification.email) {
+        return { success: false, message: 'No verification session found. Please request a new code.' };
+      }
+
+      // Get user's IP and user agent for security logging
+      const userAgent = navigator.userAgent;
+      
+      const result = await verificationManager.verifyCode(
+        verification.email, 
+        code, 
+        undefined, // IP would be available on server-side
+        userAgent
+      );
       
       if (result.success) {
         // Reset verification state
@@ -278,11 +298,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: true, message: result.message };
       } else {
         // Update verification state with new attempt info
-        const session = verificationManager.getSession(verification.email);
+        const stats = verificationManager.getSessionStats(verification.email);
         set(state => ({
           verification: {
             ...state.verification,
-            attempts: session ? session.attempts.filter(a => !a.success).length : 0,
+            attempts: 3 - stats.attemptsRemaining,
             isLocked: result.isLocked || false,
             lockUntil: result.lockUntil || null,
           }
@@ -292,7 +312,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error verifying code:', error);
-      return { success: false, message: 'An error occurred during verification.' };
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'An error occurred during verification. Please try again.' 
+      };
     }
   },
 
@@ -300,7 +323,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      const result = verificationManager.resendCode(verification.email);
+      if (!verification.email) {
+        return { success: false, message: 'No verification session found.' };
+      }
+
+      const result = await verificationManager.resendCode(verification.email);
       
       if (result.success && result.code) {
         // Send new email
@@ -308,25 +335,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const emailSent = await emailService.sendVerificationCode(verification.email, result.code);
         
         if (!emailSent) {
-          return { success: false, message: 'Failed to send verification email.' };
+          return { success: false, message: 'Failed to send verification email. Please try again.' };
         }
 
         // Restart timer
         const startTimer = () => {
           const updateTimer = () => {
-            const timeRemaining = verificationManager.getTimeRemaining(verification.email);
-            const session = verificationManager.getSession(verification.email);
+            const stats = verificationManager.getSessionStats(verification.email);
             
             set(state => ({
               verification: {
                 ...state.verification,
-                timeRemaining,
-                canResend: timeRemaining === 0,
-                attempts: session ? session.attempts.filter(a => !a.success).length : 0,
+                timeRemaining: stats.timeRemaining,
+                canResend: stats.canResend && stats.timeRemaining === 0,
+                attempts: 3 - stats.attemptsRemaining,
+                lastCodeSent: new Date(),
               }
             }));
 
-            if (timeRemaining > 0) {
+            if (stats.timeRemaining > 0) {
               setTimeout(updateTimer, 1000);
             }
           };
@@ -341,7 +368,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.error('Error resending code:', error);
-      return { success: false, message: 'Failed to resend verification code.' };
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to resend verification code. Please try again.' 
+      };
     }
   },
 
