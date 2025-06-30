@@ -115,6 +115,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
     setError('');
 
     try {
+      console.log('🔍 Attempting to verify code:', verificationCode);
       const result = await verifyCode(verificationCode);
       
       if (result.success) {
@@ -156,6 +157,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
     setSuccess('');
 
     try {
+      console.log('🔄 Resending verification code to:', email);
       const result = await resendCode();
       
       if (result.success) {
@@ -238,8 +240,9 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
             <div className="flex items-center space-x-3">
               <Inbox className="h-5 w-5 text-blue-600 flex-shrink-0" />
               <div className="text-sm">
-                <p className="font-medium text-blue-900">Check your email inbox</p>
-                <p className="text-blue-700">Look for an email from Dev Diaries with your verification code</p>
+                <p className="font-medium text-blue-900">📧 Check your email inbox</p>
+                <p className="text-blue-700">Look for an email from Supabase with your 6-digit verification code</p>
+                <p className="text-blue-600 text-xs mt-1">Don't forget to check your spam/junk folder!</p>
               </div>
             </div>
           </motion.div>
@@ -323,7 +326,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
           {/* Code Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-              Enter verification code
+              Enter your 6-digit verification code
             </label>
             <div className="flex justify-center space-x-3" onPaste={handlePaste}>
               {code.map((digit, index) => (
@@ -353,7 +356,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               ))}
             </div>
             <p className="text-xs text-gray-500 text-center mt-2">
-              Paste your code or enter each digit manually
+              💡 You can paste your code or enter each digit manually
             </p>
           </div>
 
@@ -434,6 +437,17 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               )}
             </div>
           </div>
+
+          {/* Debug Info (only in development) */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 p-3 bg-gray-50 rounded-lg border text-xs text-gray-600">
+              <p className="font-medium mb-1">🔧 Debug Info:</p>
+              <p>Email: {email}</p>
+              <p>Time remaining: {verification.timeRemaining}s</p>
+              <p>Can resend: {canResend ? 'Yes' : 'No'}</p>
+              <p>Attempts: {verification.attempts}/{verification.maxAttempts}</p>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
