@@ -142,9 +142,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('📧 Attempting Supabase signup with OTP verification...');
+      console.log('📧 Attempting Supabase signup with FORCED OTP verification...');
 
-      // CRITICAL: Register user WITHOUT emailRedirectTo to force OTP instead of magic link
+      // CRITICAL: Use the most explicit OTP-only configuration
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -152,7 +152,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: {
             name: name,
           },
-          // DO NOT SET emailRedirectTo - this forces Supabase to send OTP instead of magic link
+          // EXPLICITLY DISABLE email redirect to force OTP
+          emailRedirectTo: undefined,
+          // Force email confirmation
+          shouldCreateUser: true,
         },
       });
 
@@ -181,11 +184,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           id: data.user.id,
           email: data.user.email,
           emailConfirmed: data.user.email_confirmed_at,
-          needsConfirmation: !data.session
+          needsConfirmation: !data.session,
+          confirmationSentAt: data.user.confirmation_sent_at
         });
         
-        // Check if user needs email confirmation (should be true for OTP flow)
-        if (!data.session) {
+        // ALWAYS require email confirmation for OTP flow
+        if (!data.session || !data.user.email_confirmed_at) {
           console.log('📧 Email confirmation required, setting up OTP verification state...');
           
           // Set up verification state for OTP
@@ -277,11 +281,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log('📧 Sending OTP verification code to:', email);
       
-      // Use Supabase's resend functionality for signup confirmation with OTP
+      // Use the most explicit OTP resend method
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
-        // DO NOT include options.emailRedirectTo to ensure OTP is sent
+        // EXPLICITLY no redirect URL to force OTP
+        options: {
+          emailRedirectTo: undefined
+        }
       });
 
       if (error) {
@@ -499,11 +506,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Use Supabase's resend functionality for OTP
+      // Use the most explicit OTP resend method
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: verification.email,
-        // DO NOT include options.emailRedirectTo to ensure OTP is sent
+        // EXPLICITLY no redirect URL to force OTP
+        options: {
+          emailRedirectTo: undefined
+        }
       });
 
       if (error) {
