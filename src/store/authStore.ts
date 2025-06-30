@@ -2,10 +2,7 @@ import { create } from 'zustand';
 
 import { AuthState, User, VerificationState } from '../types';
 import { supabase } from '../lib/supabase';
-
-import { AuthState, User } from '../types';
-import { authService } from '../services/auth.service';
-
+import { AuthService } from '../services/auth.service';
 
 const initialVerificationState: VerificationState = {
   isVerifying: false,
@@ -29,7 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const session = await authService.getCurrentSession();
+      const session = await AuthService.getCurrentSession();
       
       if (session?.user) {
         const user: User = {
@@ -94,7 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email: string, password: string): Promise<boolean> => {
-    const result = await authService.login({ email, password });
+    const result = await AuthService.signIn({ email, password });
     
     if (result.success && result.user) {
       set({ 
@@ -470,12 +467,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         success: false, 
         message: 'Network error. Please check your connection and try again.' 
       };
-
     }
-    
-    return result;
   },
-
 
   resendCode: async (): Promise<{ success: boolean; message?: string }> => {
     const { verification } = get();
