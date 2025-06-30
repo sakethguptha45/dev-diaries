@@ -163,11 +163,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [userCards, searchQuery, localSearchQuery, globalSearchQuery, selectedTags]);
 
-  // Group cards by date for All Cards view
+  // Group cards by date for All Cards view - use updatedAt consistently
   const groupedCards = useMemo(() => {
     const groups: { [key: string]: Card[] } = {};
     
     filteredCards.forEach(card => {
+      // Use updatedAt for both grouping and display consistency
       const dateKey = format(ensureDate(card.updatedAt), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -506,69 +507,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
         {/* Dashboard View - Only show when not searching */}
         {!showWelcome && !showSearchResults && activeView === 'dashboard' && (
           <div className="space-y-12 px-8">
-            {/* Favorites Section with Netflix-style Carousel */}
-            {favoriteCards.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-3xl font-bold text-white flex items-center">
-                    ⭐ Favorites
-                  </h2>
-                </div>
-                
-                {/* Netflix-style carousel container */}
-                <div className="relative group">
-                  {/* Left arrow */}
-                  {favoritesCanScrollLeft && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => scrollCarousel('left', favoritesScrollRef)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-                    >
-                      <ChevronLeft className="h-6 w-6" />
-                    </motion.button>
-                  )}
-                  
-                  {/* Right arrow */}
-                  {favoritesCanScrollRight && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => scrollCarousel('right', favoritesScrollRef)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
-                    >
-                      <ChevronRight className="h-6 w-6" />
-                    </motion.button>
-                  )}
-                  
-                  {/* Carousel content */}
-                  <div 
-                    ref={favoritesScrollRef}
-                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-4 py-2"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                  >
-                    {favoriteCards.map((card, index) => (
-                      <div
-                        key={card.id}
-                        className="flex-shrink-0 w-80"
-                      >
-                        <CardPreview
-                          card={card}
-                          onToggleFavorite={toggleFavorite}
-                          onClick={handleCardClick}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Recent Cards Section with Netflix-style Carousel */}
+            {/* Recently Updated Section with Netflix-style Carousel - NOW FIRST */}
             {recentCards.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -614,6 +553,68 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {recentCards.map((card, index) => (
+                      <div
+                        key={card.id}
+                        className="flex-shrink-0 w-80"
+                      >
+                        <CardPreview
+                          card={card}
+                          onToggleFavorite={toggleFavorite}
+                          onClick={handleCardClick}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Favorites Section with Netflix-style Carousel - NOW SECOND */}
+            {favoriteCards.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold text-white flex items-center">
+                    ⭐ Favorites
+                  </h2>
+                </div>
+                
+                {/* Netflix-style carousel container */}
+                <div className="relative group">
+                  {/* Left arrow */}
+                  {favoritesCanScrollLeft && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => scrollCarousel('left', favoritesScrollRef)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </motion.button>
+                  )}
+                  
+                  {/* Right arrow */}
+                  {favoritesCanScrollRight && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => scrollCarousel('right', favoritesScrollRef)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </motion.button>
+                  )}
+                  
+                  {/* Carousel content */}
+                  <div 
+                    ref={favoritesScrollRef}
+                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-4 py-2"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {favoriteCards.map((card, index) => (
                       <div
                         key={card.id}
                         className="flex-shrink-0 w-80"
