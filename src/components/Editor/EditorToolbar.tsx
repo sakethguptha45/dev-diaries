@@ -26,12 +26,21 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
   const addLink = () => {
     const url = window.prompt('Enter URL:');
     if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
+      try {
+        new URL(url);
+        editor.chain().focus().setLink({ href: url }).run();
+      } catch (error) {
+        alert('Please enter a valid URL');
+      }
     }
   };
 
   const insertTable = () => {
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  };
+
+  const handleImageClick = () => {
+    onAddImage();
   };
 
   return (
@@ -40,6 +49,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         {/* Text Formatting */}
         <div className="flex items-center gap-1 mr-3">
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('bold') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -49,6 +59,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Bold className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('italic') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -58,6 +69,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Italic className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('underline') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -67,6 +79,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Underline className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleStrike().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('strike') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -80,6 +93,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         {/* Headings */}
         <div className="flex items-center gap-1 mr-3">
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('heading', { level: 1 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -89,6 +103,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Heading1 className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('heading', { level: 2 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -98,6 +113,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Heading2 className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('heading', { level: 3 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -112,6 +128,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         <div className="flex items-center gap-1 mr-3">
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowFontPicker(!showFontPicker)}
               className="flex items-center gap-1 p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
               title="Font Family"
@@ -124,6 +141,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
                 {fonts.map((font) => (
                   <button
                     key={font.value}
+                    type="button"
                     onClick={() => {
                       editor.chain().focus().setFontFamily(font.value).run();
                       setShowFontPicker(false);
@@ -140,6 +158,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
 
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowColorPicker(!showColorPicker)}
               className="flex items-center gap-1 p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
               title="Text Color"
@@ -153,6 +172,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
                   {colors.map((color) => (
                     <button
                       key={color}
+                      type="button"
                       onClick={() => {
                         editor.chain().focus().setColor(color).run();
                         setShowColorPicker(false);
@@ -168,6 +188,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
           </div>
 
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleHighlight().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('highlight') ? 'bg-yellow-100 text-yellow-700' : 'text-gray-600'
@@ -181,6 +202,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         {/* Alignment */}
         <div className="flex items-center gap-1 mr-3">
           <button
+            type="button"
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive({ textAlign: 'left' }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -190,6 +212,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <AlignLeft className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().setTextAlign('center').run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive({ textAlign: 'center' }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -199,6 +222,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <AlignCenter className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().setTextAlign('right').run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive({ textAlign: 'right' }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -208,6 +232,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <AlignRight className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().setTextAlign('justify').run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive({ textAlign: 'justify' }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -221,6 +246,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         {/* Lists and Blocks */}
         <div className="flex items-center gap-1 mr-3">
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('bulletList') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -230,6 +256,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <List className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('orderedList') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -239,6 +266,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <ListOrdered className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('blockquote') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
@@ -248,6 +276,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Quote className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleCode().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('code') ? 'bg-gray-800 text-white' : 'text-gray-600'
@@ -257,6 +286,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Code className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
               editor.isActive('codeBlock') ? 'bg-gray-800 text-white' : 'text-gray-600'
@@ -270,6 +300,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
         {/* Insert Elements */}
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={addLink}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
             title="Add Link"
@@ -277,13 +308,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Link className="h-4 w-4" />
           </button>
           <button
-            onClick={onAddImage}
+            type="button"
+            onClick={handleImageClick}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
             title="Add Image"
           >
             <Image className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={insertTable}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
             title="Insert Table"
@@ -291,6 +324,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Table className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm text-gray-600"
             title="Horizontal Rule"

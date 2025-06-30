@@ -1,15 +1,23 @@
 import React from 'react';
+
 import { motion } from 'framer-motion';
+
+import { Loader2 } from 'lucide-react';
+
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   color?: 'blue' | 'white' | 'gray';
   text?: string;
+
+  className?: string;
+
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'md',
   color = 'blue',
+
   text
 }) => {
   const sizeClasses = {
@@ -37,6 +45,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       />
       {text && (
         <p className="text-sm text-gray-600">{text}</p>
+
       )}
     </div>
   );

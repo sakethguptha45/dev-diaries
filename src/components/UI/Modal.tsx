@@ -6,15 +6,18 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showCloseButton?: boolean;
+
 }
 
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
+
   children,
   size = 'md',
   showCloseButton = true
@@ -24,11 +27,13 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl'
+
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
+
         <div className="fixed inset-0 z-50 overflow-y-auto">
           {/* Backdrop */}
           <motion.div
@@ -75,6 +80,8 @@ export const Modal: React.FC<ModalProps> = ({
             </motion.div>
           </div>
         </div>
+
+
       )}
     </AnimatePresence>
   );

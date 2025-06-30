@@ -42,7 +42,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         lowlight,
         defaultLanguage: 'javascript',
         HTMLAttributes: {
-          class: 'bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto',
+          class: 'slack-code-block bg-gray-50 border border-gray-200 text-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto my-4 leading-relaxed',
+          style: 'background-color: #f8f9fa; border: 1px solid #e9ecef; color: #495057; font-family: "SFMono-Regular", "Monaco", "Inconsolata", "Liberation Mono", "Courier New", monospace; line-height: 1.6;'
         },
       }),
       Color.configure({
@@ -113,14 +114,29 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Update editor content when content prop changes
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+      editor.commands.setContent(content, false);
     }
   }, [editor, content]);
 
+  // Update editable state when prop changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
+
   const addImage = useCallback(() => {
+    if (!editor) return;
+    
     const url = window.prompt('Enter image URL:');
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+    if (url) {
+      // Validate URL format
+      try {
+        new URL(url);
+        editor.chain().focus().setImage({ src: url }).run();
+      } catch (error) {
+        alert('Please enter a valid URL');
+      }
     }
   }, [editor]);
 
@@ -150,6 +166,99 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Custom CSS for Slack-like code blocks */}
+      <style jsx global>{`
+        .slack-code-block {
+          background-color: #f8f9fa !important;
+          border: 1px solid #e9ecef !important;
+          color: #495057 !important;
+          font-family: "SFMono-Regular", "Monaco", "Inconsolata", "Liberation Mono", "Courier New", monospace !important;
+          line-height: 1.6 !important;
+          border-radius: 8px !important;
+          padding: 16px !important;
+          margin: 16px 0 !important;
+          overflow-x: auto !important;
+          font-size: 14px !important;
+        }
+        
+        .slack-code-block pre {
+          background: transparent !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          color: inherit !important;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          line-height: inherit !important;
+        }
+        
+        .slack-code-block code {
+          background: transparent !important;
+          color: inherit !important;
+          font-family: inherit !important;
+          font-size: inherit !important;
+          line-height: inherit !important;
+          padding: 0 !important;
+        }
+        
+        /* Syntax highlighting for Slack theme */
+        .slack-code-block .hljs-keyword,
+        .slack-code-block .hljs-selector-tag,
+        .slack-code-block .hljs-literal,
+        .slack-code-block .hljs-section,
+        .slack-code-block .hljs-link {
+          color: #d73a49 !important;
+        }
+        
+        .slack-code-block .hljs-function .hljs-keyword {
+          color: #d73a49 !important;
+        }
+        
+        .slack-code-block .hljs-subst {
+          color: #24292e !important;
+        }
+        
+        .slack-code-block .hljs-string,
+        .slack-code-block .hljs-title,
+        .slack-code-block .hljs-name,
+        .slack-code-block .hljs-type,
+        .slack-code-block .hljs-attribute,
+        .slack-code-block .hljs-symbol,
+        .slack-code-block .hljs-bullet,
+        .slack-code-block .hljs-addition,
+        .slack-code-block .hljs-variable,
+        .slack-code-block .hljs-template-tag,
+        .slack-code-block .hljs-template-variable {
+          color: #032f62 !important;
+        }
+        
+        .slack-code-block .hljs-comment,
+        .slack-code-block .hljs-quote,
+        .slack-code-block .hljs-deletion,
+        .slack-code-block .hljs-meta {
+          color: #6a737d !important;
+        }
+        
+        .slack-code-block .hljs-keyword,
+        .slack-code-block .hljs-selector-tag,
+        .slack-code-block .hljs-literal,
+        .slack-code-block .hljs-title,
+        .slack-code-block .hljs-section,
+        .slack-code-block .hljs-doctag,
+        .slack-code-block .hljs-type,
+        .slack-code-block .hljs-name,
+        .slack-code-block .hljs-strong {
+          font-weight: bold !important;
+        }
+        
+        .slack-code-block .hljs-number {
+          color: #005cc5 !important;
+        }
+        
+        .slack-code-block .hljs-emphasis {
+          font-style: italic !important;
+        }
+      `}</style>
     </div>
   );
 };

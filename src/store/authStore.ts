@@ -1,6 +1,11 @@
 import { create } from 'zustand';
+
 import { AuthState, User, VerificationState } from '../types';
 import { supabase } from '../lib/supabase';
+
+import { AuthState, User } from '../types';
+import { authService } from '../services/auth.service';
+
 
 const initialVerificationState: VerificationState = {
   isVerifying: false,
@@ -24,7 +29,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await authService.getCurrentSession();
       
       if (session?.user) {
         const user: User = {
@@ -49,6 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // Listen for auth changes
+
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
@@ -75,6 +81,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             verification: initialVerificationState
           });
         }
+
       });
     } catch (error) {
       console.error('Error initializing auth:', error);
@@ -87,38 +94,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email: string, password: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    const result = await authService.login({ email, password });
+    
+    if (result.success && result.user) {
+      set({ 
+        user: result.user, 
+        isAuthenticated: true 
       });
-
-      if (error) {
-        console.error('Login error:', error);
-        return false;
-      }
-
-      if (data.user) {
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || data.user.email || '',
-          isEmailVerified: data.user.email_confirmed_at !== null,
-          createdAt: new Date(data.user.created_at)
-        };
-        
-        set({ 
-          user, 
-          isAuthenticated: true 
-        });
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
+      return true;
     }
+    
+    return false;
   },
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
@@ -484,8 +470,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         success: false, 
         message: 'Network error. Please check your connection and try again.' 
       };
+
     }
+    
+    return result;
   },
+
 
   resendCode: async (): Promise<{ success: boolean; message?: string }> => {
     const { verification } = get();
@@ -583,4 +573,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   resetVerification: () => {
     set({ verification: initialVerificationState });
   },
+
 }));

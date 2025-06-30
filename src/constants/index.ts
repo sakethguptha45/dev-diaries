@@ -1,3 +1,4 @@
+
 // App Configuration
 export const APP_CONFIG = {
   name: 'Dev Diaries',
@@ -33,12 +34,22 @@ export const UI_CONFIG = {
 } as const;
 
 // Card Types
+
+export const ROUTES = {
+  HOME: '/',
+  EDITOR: '/editor',
+  EDITOR_WITH_ID: '/editor/:id',
+  AUTH: '/auth'
+} as const;
+
+
 export const CARD_TYPES = {
   NOTE: 'note',
   CODE: 'code',
   LINK: 'link',
   FILE: 'file'
 } as const;
+
 
 // Validation Constants
 export const VALIDATION = {
@@ -96,4 +107,17 @@ export const ROUTES = {
   EDITOR_WITH_ID: '/editor/:id',
   EMAIL_VERIFICATION: '/verify-email',
   RESET_PASSWORD: '/reset-password'
+
+export const CARD_TYPE_LABELS = {
+  [CARD_TYPES.NOTE]: 'Note',
+  [CARD_TYPES.CODE]: 'Code',
+  [CARD_TYPES.LINK]: 'Link',
+  [CARD_TYPES.FILE]: 'File'
+} as const;
+
+export const APP_CONFIG = {
+  name: 'Dev Diaries',
+  description: 'Your personal knowledge management system',
+  version: '1.0.0'
+
 } as const;

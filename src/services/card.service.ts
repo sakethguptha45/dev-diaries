@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+
 import { Card } from '../types';
 
 export interface CardCreateData {
@@ -36,10 +37,14 @@ export class CardService {
    * Create a new card
    */
   static async createCard(cardData: CardCreateData): Promise<CardResponse> {
+
     try {
       const { data, error } = await supabase
         .from('cards')
         .insert({
+
+          user_id: cardData.userId,
+
           title: cardData.title,
           type: cardData.type,
           content: cardData.content,
@@ -47,33 +52,57 @@ export class CardService {
           links: cardData.links,
           files: cardData.files,
           tags: cardData.tags,
+
           favorite: cardData.favorite,
           user_id: cardData.userId
+
         })
         .select()
         .single();
 
       if (error) {
-        return { success: false, error: error.message };
+
+        console.error('Error creating card:', error);
+        return null;
       }
 
       if (data) {
-        const card: Card = this.transformDatabaseCard(data);
-        return { success: true, card };
+        return {
+          id: data.id,
+          userId: data.user_id,
+          title: data.title,
+          type: data.type,
+          content: data.content,
+          explanation: data.explanation,
+          links: data.links,
+          files: data.files,
+          tags: data.tags,
+          favorite: data.favorite,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at)
+        };
       }
 
-      return { success: false, error: 'Failed to create card' };
+      return null;
     } catch (error) {
-      return { success: false, error: 'Network error occurred' };
+      console.error('Error creating card:', error);
+      return null;
     }
-  }
+  },
 
-  /**
-   * Update an existing card
-   */
-  static async updateCard(id: string, updates: CardUpdateData): Promise<CardResponse> {
+  async updateCard(id: string, updates: UpdateCardData): Promise<Card | null> {
     try {
-      const updateData: any = { ...updates };
+      const updateData: any = {};
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.content !== undefined) updateData.content = updates.content;
+      if (updates.explanation !== undefined) updateData.explanation = updates.explanation;
+      if (updates.links !== undefined) updateData.links = updates.links;
+      if (updates.files !== undefined) updateData.files = updates.files;
+      if (updates.tags !== undefined) updateData.tags = updates.tags;
+      if (updates.favorite !== undefined) updateData.favorite = updates.favorite;
+      
+
       updateData.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
@@ -84,24 +113,37 @@ export class CardService {
         .single();
 
       if (error) {
-        return { success: false, error: error.message };
+
+        console.error('Error updating card:', error);
+        return null;
       }
 
       if (data) {
-        const card: Card = this.transformDatabaseCard(data);
-        return { success: true, card };
+        return {
+          id: data.id,
+          userId: data.user_id,
+          title: data.title,
+          type: data.type,
+          content: data.content,
+          explanation: data.explanation,
+          links: data.links,
+          files: data.files,
+          tags: data.tags,
+          favorite: data.favorite,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at)
+        };
       }
 
-      return { success: false, error: 'Failed to update card' };
+      return null;
     } catch (error) {
-      return { success: false, error: 'Network error occurred' };
+      console.error('Error updating card:', error);
+      return null;
     }
-  }
+  },
 
-  /**
-   * Delete a card
-   */
-  static async deleteCard(id: string): Promise<CardResponse> {
+  async deleteCard(id: string): Promise<boolean> {
+]
     try {
       const { error } = await supabase
         .from('cards')
@@ -109,237 +151,114 @@ export class CardService {
         .eq('id', id);
 
       if (error) {
-        return { success: false, error: error.message };
+
+        console.error('Error deleting card:', error);
+        return false;
       }
 
-      return { success: true };
+      return true;
     } catch (error) {
-      return { success: false, error: 'Network error occurred' };
+      console.error('Error deleting card:', error);
+      return false;
     }
-  }
+  },
 
-  /**
-   * Get all cards for a user
-   */
-  static async getUserCards(userId: string): Promise<CardResponse> {
+  async toggleFavorite(id: string, currentFavorite: boolean): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const cards: Card[] = data.map(item => this.transformDatabaseCard(item));
-      return { success: true, cards };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Get a single card by ID
-   */
-  static async getCard(id: string): Promise<CardResponse> {
-    try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (data) {
-        const card: Card = this.transformDatabaseCard(data);
-        return { success: true, card };
-      }
-
-      return { success: false, error: 'Card not found' };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Toggle favorite status of a card
-   */
-  static async toggleFavorite(id: string): Promise<CardResponse> {
-    try {
-      // First get the current card to know its favorite status
-      const { data: currentCard, error: fetchError } = await supabase
-        .from('cards')
-        .select('favorite')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) {
-        return { success: false, error: fetchError.message };
-      }
-
-      // Toggle the favorite status
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('cards')
         .update({ 
-          favorite: !currentCard.favorite,
-          updated_at: new Date().toISOString()
+          favorite: !currentFavorite
+          // Don't update updated_at for favorite toggle to preserve original order
         })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error toggling favorite:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      return false;
+    }
+  },
+
+  async getUserCards(userId: string): Promise<Card[]> {
+
+    try {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('user_id', userId)
+
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user cards:', error);
+        return [];
+      }
+
+      if (!data) return [];
+
+      return data.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        title: item.title,
+        type: item.type,
+        content: item.content,
+        explanation: item.explanation,
+        links: item.links,
+        files: item.files,
+        tags: item.tags,
+        favorite: item.favorite,
+        createdAt: new Date(item.created_at),
+        updatedAt: new Date(item.updated_at)
+      }));
+    } catch (error) {
+      console.error('Error fetching user cards:', error);
+      return [];
+    }
+  },
+
+  async getCardById(id: string): Promise<Card | null> {
+
+    try {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+
         .eq('id', id)
-        .select()
         .single();
 
       if (error) {
-        return { success: false, error: error.message };
+        console.error('Error fetching card:', error);
+        return null;
       }
 
       if (data) {
-        const card: Card = this.transformDatabaseCard(data);
-        return { success: true, card };
+        return {
+          id: data.id,
+          userId: data.user_id,
+          title: data.title,
+          type: data.type,
+          content: data.content,
+          explanation: data.explanation,
+          links: data.links,
+          files: data.files,
+          tags: data.tags,
+          favorite: data.favorite,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at)
+        };
       }
 
-      return { success: false, error: 'Failed to toggle favorite' };
+      return null;
     } catch (error) {
-      return { success: false, error: 'Network error occurred' };
+      console.error('Error fetching card:', error);
+      return null;
     }
   }
+};
 
-  /**
-   * Search cards for a user
-   */
-  static async searchCards(userId: string, query: string): Promise<CardResponse> {
-    try {
-      const { data, error } = await supabase
-        .rpc('search_cards', {
-          search_query: query,
-          user_uuid: userId
-        });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const cards: Card[] = data.map((item: any) => this.transformDatabaseCard(item));
-      return { success: true, cards };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Get favorite cards for a user
-   */
-  static async getFavoriteCards(userId: string): Promise<CardResponse> {
-    try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('favorite', true)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const cards: Card[] = data.map(item => this.transformDatabaseCard(item));
-      return { success: true, cards };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Get recent cards for a user
-   */
-  static async getRecentCards(userId: string, limit: number = 10): Promise<CardResponse> {
-    try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const cards: Card[] = data.map(item => this.transformDatabaseCard(item));
-      return { success: true, cards };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Get cards by tags for a user
-   */
-  static async getCardsByTags(userId: string, tags: string[]): Promise<CardResponse> {
-    try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', userId)
-        .overlaps('tags', tags)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      const cards: Card[] = data.map(item => this.transformDatabaseCard(item));
-      return { success: true, cards };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Get all unique tags for a user
-   */
-  static async getUserTags(userId: string): Promise<{ success: boolean; tags?: string[]; error?: string }> {
-    try {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('tags')
-        .eq('user_id', userId);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      // Extract and flatten all tags
-      const allTags = data.flatMap(card => card.tags || []);
-      const uniqueTags = Array.from(new Set(allTags)).sort();
-
-      return { success: true, tags: uniqueTags };
-    } catch (error) {
-      return { success: false, error: 'Network error occurred' };
-    }
-  }
-
-  /**
-   * Transform database card to application Card type
-   */
-  private static transformDatabaseCard(dbCard: any): Card {
-    return {
-      id: dbCard.id,
-      userId: dbCard.user_id,
-      title: dbCard.title,
-      type: dbCard.type,
-      content: dbCard.content,
-      explanation: dbCard.explanation,
-      links: dbCard.links || [],
-      files: dbCard.files || [],
-      tags: dbCard.tags || [],
-      favorite: dbCard.favorite,
-      createdAt: new Date(dbCard.created_at),
-      updatedAt: new Date(dbCard.updated_at)
-    };
-  }
-}

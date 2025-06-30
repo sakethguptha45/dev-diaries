@@ -3,7 +3,9 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
+
   fallback?: ReactNode;
+
 }
 
 interface State {
@@ -12,61 +14,62 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
 
-  public static getDerivedStateFromError(error: Error): State {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  private handleRetry = () => {
-    this.setState({ hasError: false, error: undefined });
+  handleReload = () => {
+    window.location.reload();
   };
 
-  public render() {
+  render() {
     if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 px-4">
-          <div className="max-w-md w-full text-center">
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/40 p-8">
-              <div className="mx-auto h-16 w-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                <AlertTriangle className="h-8 w-8 text-white" />
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="flex justify-center mb-6">
+              <div className="bg-red-100 p-4 rounded-full">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
-              
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">
-                Something went wrong
-              </h1>
-              
-              <p className="text-gray-600 mb-6">
-                We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
-              </p>
-
-              {process.env.NODE_ENV === 'development' && this.state.error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-                  <p className="text-sm font-medium text-red-800 mb-2">Error Details:</p>
-                  <pre className="text-xs text-red-700 overflow-auto">
-                    {this.state.error.message}
-                  </pre>
-                </div>
-              )}
-              
-              <button
-                onClick={this.handleRetry}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/25 transition-all duration-300"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </button>
             </div>
+            
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Something went wrong
+            </h1>
+            
+            <p className="text-gray-600 mb-6">
+              We encountered an unexpected error. Please try refreshing the page.
+            </p>
+            
+            <button
+              onClick={this.handleReload}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh Page
+            </button>
+            
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="mt-6 text-left">
+                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                  Error Details
+                </summary>
+                <pre className="mt-2 text-xs text-red-600 bg-red-50 p-3 rounded border overflow-auto">
+                  {this.state.error.toString()}
+                </pre>
+              </details>
+            )}
+
           </div>
         </div>
       );

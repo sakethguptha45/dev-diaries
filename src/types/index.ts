@@ -29,6 +29,29 @@ export interface AttachmentFile {
   url: string;
 }
 
+export interface CreateCardData {
+  title: string;
+  type: 'note' | 'code' | 'link' | 'file';
+  content: string;
+  explanation: string;
+  links: string[];
+  files: AttachmentFile[];
+  tags: string[];
+  favorite: boolean;
+  userId: string;
+}
+
+export interface UpdateCardData {
+  title?: string;
+  type?: 'note' | 'code' | 'link' | 'file';
+  content?: string;
+  explanation?: string;
+  links?: string[];
+  files?: AttachmentFile[];
+  tags?: string[];
+  favorite?: boolean;
+}
+
 export interface SearchResult {
   cards: Card[];
   total: number;
@@ -57,10 +80,14 @@ export interface AuthState {
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }>;
   logout: () => void;
   initialize: () => Promise<void>;
+
   sendVerificationCode: (email: string) => Promise<{ success: boolean; message?: string }>;
   verifyCode: (code: string) => Promise<{ success: boolean; message?: string }>;
   resendCode: () => Promise<{ success: boolean; message?: string }>;
   resetVerification: () => void;
+
+  deleteAccount: () => Promise<{ success: boolean; errorMessage?: string }>;
+
 }
 
 export interface CardState {
@@ -68,8 +95,8 @@ export interface CardState {
   loading: boolean;
   searchQuery: string;
   selectedTags: string[];
-  addCard: (card: Omit<Card, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateCard: (id: string, updates: Partial<Card>) => Promise<void>;
+  addCard: (card: CreateCardData) => Promise<void>;
+  updateCard: (id: string, updates: UpdateCardData) => Promise<void>;
   deleteCard: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
   searchCards: (query: string) => void;

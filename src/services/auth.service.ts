@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
+
 export interface AuthResponse {
   success: boolean;
   user?: User;
@@ -18,6 +19,7 @@ export class AuthService {
    * Sign in with email and password
    */
   static async signIn(email: string, password: string): Promise<AuthResponse> {
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -25,7 +27,9 @@ export class AuthService {
       });
 
       if (error) {
+
         return { success: false, error: error.message };
+
       }
 
       if (data.user) {
@@ -40,6 +44,7 @@ export class AuthService {
         return { success: true, user };
       }
 
+
       return { success: false, error: 'Authentication failed' };
     } catch (error) {
       return { success: false, error: 'Network error occurred' };
@@ -50,17 +55,21 @@ export class AuthService {
    * Sign up with email, password, and name
    */
   static async signUp(email: string, password: string, name: string): Promise<AuthResponse> {
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+
           data: { name },
           emailRedirectTo: undefined, // Force OTP verification
+
         },
       });
 
       if (error) {
+
         if (error.message.includes('already registered')) {
           return { 
             success: false, 
@@ -68,10 +77,12 @@ export class AuthService {
           };
         }
         return { success: false, error: error.message };
+
       }
 
       if (data.user) {
         // Check if email confirmation is required
+
         if (!data.session || !data.user.email_confirmed_at) {
           return { 
             success: true, 
@@ -340,3 +351,4 @@ export class AuthService {
     return supabase.auth.onAuthStateChange(callback);
   }
 }
+

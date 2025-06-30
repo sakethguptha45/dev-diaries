@@ -1,9 +1,12 @@
+
 import { VALIDATION } from '../constants';
 
 export interface ValidationResult {
+
   isValid: boolean;
   errors: string[];
 }
+
 
 export interface PasswordStrength {
   score: number;
@@ -30,10 +33,12 @@ export const validateEmail = (email: string): ValidationResult => {
     errors.push('Please enter a valid email address');
   }
 
+
   return {
     isValid: errors.length === 0,
     errors
   };
+
 };
 
 /**
@@ -211,10 +216,12 @@ export const validateCardLinks = (links: string[]): ValidationResult => {
     errors.push('All links must be valid URLs starting with http:// or https://');
   }
 
+
   return {
     isValid: errors.length === 0,
     errors
   };
+
 };
 
 /**
@@ -231,10 +238,12 @@ export const validateName = (name: string): ValidationResult => {
     errors.push('Name must be less than 50 characters long');
   }
 
+
   return {
     isValid: errors.length === 0,
     errors
   };
+
 };
 
 /**
@@ -303,3 +312,4 @@ export const validateCardData = (cardData: {
     }
   };
 };
+
