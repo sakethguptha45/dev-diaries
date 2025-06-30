@@ -199,6 +199,7 @@ export class AuthService {
    */
   static async verifyEmail(email: string, token: string): Promise<VerificationResponse> {
     try {
+
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token,
@@ -265,6 +266,7 @@ export class AuthService {
         success: false, 
         message: 'Network error. Please try again.' 
       };
+
     }
   }
 
