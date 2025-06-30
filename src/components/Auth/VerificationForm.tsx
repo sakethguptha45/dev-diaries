@@ -400,7 +400,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               
               <div className="flex items-center space-x-1 text-gray-500">
                 <Mail className="h-4 w-4" />
-                <span>Check spam folder</span>
+                <span>Check notification above</span>
               </div>
             </div>
 

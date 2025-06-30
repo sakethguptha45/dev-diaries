@@ -16,7 +16,7 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
-  const { register: registerUser } = useAuthStore();
+  const { register: registerUser, sendVerificationCode } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,9 +42,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       if (result.success) {
         if (result.needsVerification) {
           setUserEmail(data.email);
-          setShowVerification(true);
+          // Automatically send verification code
+          const codeResult = await sendVerificationCode(data.email);
+          if (codeResult.success) {
+            setShowVerification(true);
+          } else {
+            setError(codeResult.message || 'Failed to send verification code');
+          }
         }
-        // If no verification needed, user will be automatically logged in
       } else {
         setError(result.errorMessage || 'Registration failed. Please try again.');
       }
