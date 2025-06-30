@@ -4,11 +4,13 @@ import { motion } from 'framer-motion';
 import { Save, ArrowLeft, Heart, FileHeart as HeartFilled, Tag, Link as LinkIcon, Upload, Trash2, Plus, X, ExternalLink } from 'lucide-react';
 import { RichTextEditor } from '../components/Editor/RichTextEditor';
 import { useCardStore } from '../store/cardStore';
+import { useAuthStore } from '../store/authStore';
 import { Card } from '../types';
 
 export const EditorPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { cards, addCard, updateCard, deleteCard, toggleFavorite } = useCardStore();
   
   const [isEditing, setIsEditing] = useState(!id);
@@ -53,6 +55,11 @@ export const EditorPage: React.FC = () => {
       return;
     }
 
+    if (!user) {
+      alert('You must be logged in to save cards');
+      return;
+    }
+
     const cardData = {
       title: title.trim(),
       content,
@@ -61,7 +68,8 @@ export const EditorPage: React.FC = () => {
       favorite: isFavorite,
       files: currentCard?.files || [],
       type: 'note' as const,
-      explanation: ''
+      explanation: '',
+      userId: user.id
     };
 
     if (currentCard) {

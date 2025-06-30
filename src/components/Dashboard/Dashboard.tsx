@@ -20,7 +20,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     toggleFavorite,
     getRecentCards,
     getFavoriteCards,
-    getAllTags
+    getAllTags,
+    searchQuery: globalSearchQuery,
+    searchCards
   } = useCardStore();
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -48,6 +50,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   const ensureDate = (date: string | Date): Date => {
     return typeof date === 'string' ? new Date(date) : date;
   };
+
+  // Update search in store when local search changes
+  useEffect(() => {
+    searchCards(localSearchQuery);
+  }, [localSearchQuery, searchCards]);
 
   // Update scroll button states
   const updateScrollButtons = () => {
@@ -103,16 +110,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
       updatedAt: ensureDate(card.updatedAt)
     }));
 
-    const currentQuery = searchQuery || localSearchQuery;
+    // Use the current search query (either from props, local state, or global state)
+    const currentQuery = searchQuery || localSearchQuery || globalSearchQuery;
 
     // Apply search filter
-    if (currentQuery.trim()) {
-      const query = currentQuery.toLowerCase();
-      filtered = filtered.filter(card =>
-        card.title.toLowerCase().includes(query) ||
-        card.content.toLowerCase().includes(query) ||
-        card.tags.some(tag => tag.toLowerCase().includes(query))
-      );
+    if (currentQuery && currentQuery.trim()) {
+      const query = currentQuery.toLowerCase().trim();
+      filtered = filtered.filter(card => {
+        const titleMatch = card.title.toLowerCase().includes(query);
+        const contentMatch = card.content.toLowerCase().includes(query);
+        const tagMatch = card.tags.some(tag => tag.toLowerCase().includes(query));
+        const explanationMatch = card.explanation.toLowerCase().includes(query);
+        
+        return titleMatch || contentMatch || tagMatch || explanationMatch;
+      });
     }
 
     // Apply tag filter
@@ -123,7 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     }
 
     return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [userCards, searchQuery, localSearchQuery, selectedTags]);
+  }, [userCards, searchQuery, localSearchQuery, globalSearchQuery, selectedTags]);
 
   // Group cards by date for All Cards view
   const groupedCards = useMemo(() => {
@@ -162,15 +173,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   };
 
   const getDisplayCards = () => {
+    const currentQuery = searchQuery || localSearchQuery || globalSearchQuery;
+    
     switch (activeView) {
       case 'favorites':
         return favoriteCards.filter(card => {
-          const currentQuery = searchQuery || localSearchQuery;
           if (!currentQuery.trim() && selectedTags.length === 0) return true;
           
           const matchesSearch = !currentQuery.trim() || 
             card.title.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.content.toLowerCase().includes(currentQuery.toLowerCase()) ||
+            card.explanation.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.tags.some(tag => tag.toLowerCase().includes(currentQuery.toLowerCase()));
           
           const matchesTags = selectedTags.length === 0 || 
@@ -180,12 +193,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
         });
       case 'recent':
         return recentCards.filter(card => {
-          const currentQuery = searchQuery || localSearchQuery;
           if (!currentQuery.trim() && selectedTags.length === 0) return true;
           
           const matchesSearch = !currentQuery.trim() || 
             card.title.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.content.toLowerCase().includes(currentQuery.toLowerCase()) ||
+            card.explanation.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.tags.some(tag => tag.toLowerCase().includes(currentQuery.toLowerCase()));
           
           const matchesTags = selectedTags.length === 0 || 
@@ -246,9 +259,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     });
   };
 
+  // Clear search and filters
+  const clearSearch = () => {
+    setLocalSearchQuery('');
+    setSelectedTags([]);
+    searchCards('');
+  };
+
+  // Check if we have search results to show
+  const currentQuery = searchQuery || localSearchQuery || globalSearchQuery;
+  const hasSearchQuery = currentQuery && currentQuery.trim();
+  const hasFilters = selectedTags.length > 0;
+  const showSearchResults = hasSearchQuery || hasFilters;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="space-y-12 pb-12">
+      <div className="space-y-8 pb-12">
         {/* Welcome Section - Only show when no cards exist */}
         {showWelcome && (
           <motion.div
@@ -291,34 +317,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative"
+            className="relative px-8 pt-8"
           >
             {/* Background blur effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 backdrop-blur-xl rounded-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 via-slate-700/30 to-slate-800/30 backdrop-blur-xl rounded-3xl mx-8"></div>
             
-            <div className="relative space-y-8 p-8">
+            <div className="relative space-y-6 p-6">
               {/* Centered Search Bar */}
               <div className="flex justify-center">
                 <div className="relative w-full max-w-2xl">
                   <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-none z-10">
-                    <Search className="h-6 w-6 text-slate-400" />
+                    <Search className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
                     type="text"
                     placeholder="Search your knowledge base..."
                     value={localSearchQuery}
                     onChange={(e) => setLocalSearchQuery(e.target.value)}
-                    className="w-full pl-16 pr-6 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl text-white placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/30 focus:border-blue-400/50 transition-all duration-300 text-lg"
+                    className="w-full pl-14 pr-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 transition-all duration-300 text-base"
                   />
+                  {(localSearchQuery || selectedTags.length > 0) && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors duration-200 text-lg"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Tags - Single line only, limited to 8 */}
+              {/* Search Results Info */}
+              {(localSearchQuery || selectedTags.length > 0) && (
+                <div className="flex justify-center">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
+                    <p className="text-sm text-slate-300">
+                      Found {filteredCards.length} {filteredCards.length === 1 ? 'card' : 'cards'}
+                      {localSearchQuery && ` for "${localSearchQuery}"`}
+                      {selectedTags.length > 0 && ` with tags: ${selectedTags.join(', ')}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tags - Limited to 9 tags in single row */}
               {allTags.length > 0 && (
                 <div className="flex justify-center">
-                  <div className="w-full max-w-4xl">
-                    <div className="flex space-x-3 justify-center flex-wrap">
-                      {allTags.map(tag => (
+                  <div className="w-full max-w-6xl">
+                    <div className="flex items-center justify-center space-x-3 overflow-hidden">
+                      {allTags.slice(0, 9).map(tag => (
                         <motion.button
                           key={tag}
                           whileHover={{ scale: 1.05, y: -2 }}
@@ -333,42 +380,111 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                           #{tag}
                         </motion.button>
                       ))}
+                      {allTags.length > 9 && (
+                        <span className="flex-shrink-0 px-3 py-2 bg-white/5 text-slate-400 text-sm rounded-full border border-white/10">
+                          +{allTags.length - 9} more
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Navigation Bar */}
-              <div className="flex justify-center">
-                <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-2xl p-2 border border-white/20">
-                  {[
-                    { key: 'dashboard', label: 'Dashboard' },
-                    { key: 'all', label: 'All Cards' },
-                    { key: 'favorites', label: 'Favorites' },
-                    { key: 'recent', label: 'Recent' }
-                  ].map((view) => (
-                    <motion.button
-                      key={view.key}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setActiveView(view.key as any)}
-                      className={`px-6 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
-                        activeView === view.key
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
-                          : 'text-slate-300 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {view.label}
-                    </motion.button>
-                  ))}
+              {/* Navigation Bar - Only show when not searching */}
+              {!showSearchResults && (
+                <div className="flex justify-center pt-2">
+                  <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl p-1.5 border border-white/20">
+                    {[
+                      { key: 'dashboard', label: 'Dashboard' },
+                      { key: 'all', label: 'All Cards' },
+                      { key: 'favorites', label: 'Favorites' },
+                      { key: 'recent', label: 'Recent' }
+                    ].map((view) => (
+                      <motion.button
+                        key={view.key}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setActiveView(view.key as any)}
+                        className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${
+                          activeView === view.key
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                            : 'text-slate-300 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {view.label}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         )}
 
-        {/* Dashboard View */}
-        {!showWelcome && activeView === 'dashboard' && (
+        {/* Search Results View - Show when searching */}
+        {!showWelcome && showSearchResults && (
+          <div className="px-8">
+            <AnimatePresence mode="wait">
+              {filteredCards.length > 0 ? (
+                <motion.div
+                  key="search-results"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  <h2 className="text-3xl font-bold text-white px-4">
+                    🔍 Search Results
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredCards.map((card, index) => (
+                      <motion.div
+                        key={card.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <CardPreview
+                          card={card}
+                          onToggleFavorite={toggleFavorite}
+                          onClick={handleCardClick}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="search-empty"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="text-center py-16"
+                >
+                  <div className="mx-auto h-32 w-32 bg-gradient-to-br from-slate-700 to-slate-800 rounded-full flex items-center justify-center mb-6">
+                    <Search className="h-16 w-16 text-slate-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">No cards found</h3>
+                  <p className="text-slate-400 mb-8 text-lg max-w-md mx-auto">
+                    Try adjusting your search or filter criteria
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleNewCard}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/25 transition-all duration-300"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Create New Card
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Dashboard View - Only show when not searching */}
+        {!showWelcome && !showSearchResults && activeView === 'dashboard' && (
           <div className="space-y-12 px-8">
             {/* Favorites Section with Netflix-style Carousel */}
             {favoriteCards.length > 0 && (
@@ -416,11 +532,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {favoriteCards.map((card, index) => (
-                      <motion.div
+                      <div
                         key={card.id}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
                         className="flex-shrink-0 w-80"
                       >
                         <CardPreview
@@ -428,7 +541,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                           onToggleFavorite={toggleFavorite}
                           onClick={handleCardClick}
                         />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -481,11 +594,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {recentCards.map((card, index) => (
-                      <motion.div
+                      <div
                         key={card.id}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
                         className="flex-shrink-0 w-80"
                       >
                         <CardPreview
@@ -493,7 +603,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                           onToggleFavorite={toggleFavorite}
                           onClick={handleCardClick}
                         />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -510,18 +620,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 <h2 className="text-3xl font-bold text-white px-4">📚 More Cards</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
                   {remainingCards.slice(0, 8).map((card, index) => (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
+                    <div key={card.id}>
                       <CardPreview
                         card={card}
                         onToggleFavorite={toggleFavorite}
                         onClick={handleCardClick}
                       />
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </motion.div>
@@ -529,8 +634,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
           </div>
         )}
 
-        {/* All Cards View with Date Grouping */}
-        {!showWelcome && activeView === 'all' && (
+        {/* All Cards View with Date Grouping - Only show when not searching */}
+        {!showWelcome && !showSearchResults && activeView === 'all' && (
           <div className="px-8">
             <AnimatePresence mode="wait">
               {groupedCards.length > 0 ? (
@@ -562,18 +667,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       {/* Cards Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {cardsForDate.map((card, cardIndex) => (
-                          <motion.div
-                            key={card.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: (groupIndex * 0.1) + (cardIndex * 0.05) }}
-                          >
+                          <div key={card.id}>
                             <CardPreview
                               card={card}
                               onToggleFavorite={toggleFavorite}
                               onClick={handleCardClick}
                             />
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     </motion.div>
@@ -609,8 +709,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
           </div>
         )}
 
-        {/* Favorites and Recent Views */}
-        {!showWelcome && (activeView === 'favorites' || activeView === 'recent') && (
+        {/* Favorites and Recent Views - Only show when not searching */}
+        {!showWelcome && !showSearchResults && (activeView === 'favorites' || activeView === 'recent') && (
           <div className="px-8">
             <AnimatePresence mode="wait">
               {getDisplayCards().length > 0 ? (
@@ -623,18 +723,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {getDisplayCards().map((card, index) => (
-                      <motion.div
-                        key={card.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
+                      <div key={card.id}>
                         <CardPreview
                           card={card}
                           onToggleFavorite={toggleFavorite}
                           onClick={handleCardClick}
                         />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </motion.div>
