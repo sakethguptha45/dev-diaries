@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Card, CardState } from '../types';
-import { cardService } from '../services/card.service';
+import { CardService } from '../services/card.service';
 import { sortBy } from '../utils/array';
 
 export const useCardStore = create<CardState>((set, get) => ({
@@ -13,7 +13,7 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const newCard = await cardService.createCard(cardData);
+      const newCard = await CardService.createCard(cardData);
       
       if (newCard) {
         set((state) => ({
@@ -33,7 +33,7 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const updatedCard = await cardService.updateCard(id, updates);
+      const updatedCard = await CardService.updateCard(id, updates);
       
       if (updatedCard) {
         set((state) => ({
@@ -55,7 +55,7 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const success = await cardService.deleteCard(id);
+      const success = await CardService.deleteCard(id);
       
       if (success) {
         set((state) => ({
@@ -76,7 +76,7 @@ export const useCardStore = create<CardState>((set, get) => ({
       const card = get().cards.find(c => c.id === id);
       if (!card) return;
 
-      const success = await cardService.toggleFavorite(id, card.favorite);
+      const success = await CardService.toggleFavorite(id, card.favorite);
       
       if (success) {
         set((state) => ({
@@ -96,7 +96,7 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const cards = await cardService.getUserCards(userId);
+      const cards = await CardService.getUserCards(userId);
       
       set({ cards, loading: false });
     } catch (error) {
