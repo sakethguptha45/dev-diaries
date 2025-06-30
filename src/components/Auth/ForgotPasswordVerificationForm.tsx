@@ -111,6 +111,8 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
     setError('');
 
     try {
+      console.log('🔍 Verifying password reset code:', verificationCode);
+      
       // Verify the OTP for password recovery
       const { data, error } = await supabase.auth.verifyOtp({
         email: email,
@@ -147,12 +149,14 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
         console.log('✅ Password reset verification successful');
         setSuccess('Code verified! You can now create a new password.');
         
-        // Set the session for password reset
+        // Set the session for password reset - this is crucial!
         await supabase.auth.setSession(data.session);
         
         setTimeout(() => {
           onVerified();
         }, 1500);
+      } else {
+        setError('Verification failed. Please try again.');
       }
     } catch (error) {
       console.error('Verification error:', error);

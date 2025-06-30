@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Lock, CheckCircle, AlertCircle, Shield, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Lock, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface NewPasswordFormData {
@@ -17,7 +17,6 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [previousPassword, setPreviousPassword] = useState('');
 
   const {
     register,
@@ -33,34 +32,54 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
     setError('');
 
     try {
-      // Check if new password is same as previous (in real app, this would be handled server-side)
-      if (previousPassword && data.password === previousPassword) {
-        setError('New password cannot be the same as your previous password');
+      console.log('🔄 Updating password...');
+
+      // Check if we have a valid session first
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        setError('Session expired. Please restart the password reset process.');
         setLoading(false);
         return;
       }
 
-      console.log('🔄 Updating password...');
+      console.log('✅ Valid session found, proceeding with password update...');
 
-      const { error } = await supabase.auth.updateUser({
+      // Update the user's password using the current session
+      const { data: updateData, error } = await supabase.auth.updateUser({
         password: data.password
       });
 
       if (error) {
         console.error('❌ Password update error:', error);
         
-        if (error.message.includes('same as the old password')) {
-          setError('New password cannot be the same as your previous password');
+        if (error.message.includes('same as the old password') || error.message.includes('same as your previous password')) {
+          setError('New password cannot be the same as your previous password. Please choose a different password.');
+        } else if (error.message.includes('session') || error.message.includes('expired')) {
+          setError('Session expired. Please restart the password reset process.');
+        } else if (error.message.includes('weak') || error.message.includes('strength')) {
+          setError('Password is too weak. Please choose a stronger password.');
         } else {
-          setError(error.message);
+          setError(error.message || 'Failed to update password. Please try again.');
         }
-      } else {
-        console.log('✅ Password updated successfully');
+      } else if (updateData.user) {
+        console.log('✅ Password updated successfully for user:', updateData.user.email);
+        
+        // Small delay to ensure the password is fully updated in the database
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Sign out the user so they can sign in with the new password
+        console.log('🔄 Signing out user to complete password reset...');
+        await supabase.auth.signOut();
+        
+        console.log('✅ Password reset completed successfully!');
         onSuccess();
+      } else {
+        setError('Password update failed. Please try again.');
       }
     } catch (error) {
       console.error('Password update error:', error);
-      setError('Network error. Please try again.');
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
