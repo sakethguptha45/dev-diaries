@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean }> => {
+  register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Registration error:', error);
-        return { success: false };
+        return { success: false, errorMessage: error.message };
       }
 
       if (data.user) {
@@ -140,10 +140,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: true, needsVerification: false };
       }
 
-      return { success: false };
+      return { success: false, errorMessage: 'Registration failed. Please try again.' };
     } catch (error) {
       console.error('Registration error:', error);
-      return { success: false };
+      return { success: false, errorMessage: 'An error occurred. Please try again.' };
     }
   },
 

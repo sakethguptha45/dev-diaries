@@ -42,7 +42,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         }
         // If no verification needed, user will be automatically logged in
       } else {
-        setError('Registration failed. Please try again.');
+        setError(result.errorMessage || 'Registration failed. Please try again.');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
