@@ -120,10 +120,3 @@
 .fade-out {
   animation: fade-out 300ms ease-in-out forwards;
 }
-
-.relative.space-y-6.p-6 {
-  padding: 0px;
-  margin: 0px;
-  height: 45px;
-  border: 0px;
-}
