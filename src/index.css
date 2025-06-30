@@ -80,3 +80,10 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+.relative space-y-6 p-6 {
+  padding:0px;
+  margin: 0px;
+  height: 45px;
+  border:0px;
+
+}

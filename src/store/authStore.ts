@@ -150,12 +150,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state regardless of server response
       set({ 
         user: null, 
         isAuthenticated: false 
       });
+    }
+  },
+
+  deleteAccount: async (): Promise<{ success: boolean; errorMessage?: string }> => {
+    try {
+      const { user } = get();
+      if (!user) {
+        return { success: false, errorMessage: 'No user logged in' };
+      }
+
+      // First delete all user's cards (handled by foreign key cascade)
+      const { error: cardsError } = await supabase
+        .from('cards')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (cardsError) {
+        console.error('Error deleting user cards:', cardsError);
+        return { success: false, errorMessage: 'Failed to delete user data' };
+      }
+
+      // Delete the user account
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+
+      if (deleteError) {
+        console.error('Error deleting user account:', deleteError);
+        return { success: false, errorMessage: 'Failed to delete account' };
+      }
+
+      // Clear local state
+      set({ 
+        user: null, 
+        isAuthenticated: false 
+      });
+
+      return { success: true };
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Delete account error:', error);
+      return { success: false, errorMessage: 'An error occurred while deleting account' };
     }
   }
 }));
