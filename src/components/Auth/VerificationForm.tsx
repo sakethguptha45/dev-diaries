@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Clock, RefreshCw, CheckCircle, AlertCircle, Mail, ArrowLeft, Wifi, WifiOff } from 'lucide-react';
+import { Shield, Clock, RefreshCw, CheckCircle, AlertCircle, Mail, ArrowLeft, Wifi, WifiOff, Inbox } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface VerificationFormProps {
@@ -229,6 +229,21 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          {/* Email Check Reminder */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg"
+          >
+            <div className="flex items-center space-x-3">
+              <Inbox className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-blue-900">Check your email inbox</p>
+                <p className="text-blue-700">Look for an email from Dev Diaries with your verification code</p>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Timer and Status */}
           <div className="text-center mb-6">
             {isLocked ? (
@@ -377,7 +392,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               <RefreshCw className={`h-4 w-4 ${isResending ? 'animate-spin' : ''}`} />
               <span>
                 {isResending
-                  ? 'Sending...'
+                  ? 'Sending new code...'
                   : !isOnline
                   ? 'No connection'
                   : canResend
@@ -400,7 +415,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               
               <div className="flex items-center space-x-1 text-gray-500">
                 <Mail className="h-4 w-4" />
-                <span>Check notification above</span>
+                <span>Check your email</span>
               </div>
             </div>
 
