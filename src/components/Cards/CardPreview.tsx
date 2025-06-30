@@ -27,10 +27,13 @@ export const CardPreview: React.FC<CardPreviewProps> = ({
     onToggleFavorite(card.id);
   };
 
-  // Ensure we have a Date object
+  // Ensure we have a Date object and use updatedAt consistently
   const ensureDate = (date: Date | string): Date => {
     return date instanceof Date ? date : new Date(date);
   };
+
+  // Use updatedAt for display - same as what's used for grouping
+  const displayDate = ensureDate(card.updatedAt);
 
   return (
     <div
@@ -63,7 +66,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({
             <div className="flex items-center space-x-3 text-sm text-gray-500">
               <div className="flex items-center space-x-1">
                 <Calendar className="h-3 w-3" />
-                <span>{format(ensureDate(card.updatedAt), 'MMM d, yyyy')}</span>
+                <span>{format(displayDate, 'MMM d, yyyy')}</span>
               </div>
               {card.tags.length > 0 && (
                 <div className="flex items-center space-x-1">
