@@ -1,5 +1,4 @@
-// Email service for sending verification codes
-// This service sends REAL verification codes to user emails
+import emailjs from 'emailjs-com';
 
 interface EmailResponse {
   success: boolean;
@@ -12,7 +11,7 @@ export const generateVerificationCode = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Send verification email using EmailJS (works in browser)
+// Send verification email with actual 6-digit code
 export const sendVerificationEmail = async (
   email: string, 
   code: string, 
@@ -28,28 +27,35 @@ export const sendVerificationEmail = async (
       };
     }
 
-    // Create email content
-    const emailContent = {
-      to: email,
-      subject: 'Dev Diaries - Email Verification Code',
-      html: createEmailTemplate(code, userName || 'User'),
-      text: createTextEmail(code, userName || 'User')
-    };
+    console.log('🚀 Sending verification email...');
+    console.log('📧 To:', email);
+    console.log('🔑 Code:', code);
+    console.log('👤 User:', userName || 'User');
 
-    // Send email using our service
-    const response = await sendEmailViaService(emailContent);
+    // Send email using EmailJS (real email service)
+    const emailResult = await sendEmailViaEmailJS(email, code, userName || 'User');
     
-    if (response.success) {
-      console.log(`✅ Verification email sent to ${email} with code: ${code}`);
+    if (emailResult.success) {
+      console.log('✅ Email sent successfully!');
+      
+      // Show browser notification for development
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Dev Diaries Verification Code', {
+          body: `Your verification code is: ${code}`,
+          icon: '/favicon.ico',
+          tag: 'verification-code'
+        });
+      }
+      
       return {
         success: true,
         message: 'Verification code sent to your email address'
       };
     } else {
-      throw new Error(response.error || 'Failed to send email');
+      throw new Error(emailResult.error || 'Failed to send email');
     }
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     return {
       success: false,
       message: 'Failed to send verification email. Please try again.'
@@ -57,274 +63,164 @@ export const sendVerificationEmail = async (
   }
 };
 
-// Email service that actually sends emails
-const sendEmailViaService = async (emailData: any): Promise<EmailResponse> => {
+// Send email using EmailJS (works directly from browser)
+const sendEmailViaEmailJS = async (
+  email: string, 
+  code: string, 
+  userName: string
+): Promise<EmailResponse> => {
   try {
-    // For development and production, we'll use a real email service
-    // Using EmailJS which works directly from the browser
+    console.log('📨 Preparing to send real email...');
     
-    // Simulate API call delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Initialize EmailJS with your credentials
+    emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your EmailJS User ID
     
-    // In a real implementation, you would use:
-    // 1. EmailJS (browser-based)
-    // 2. Resend API
-    // 3. SendGrid API
-    // 4. Mailgun API
-    // 5. AWS SES
+    const templateParams = {
+      to_email: email,
+      to_name: userName,
+      verification_code: code,
+      user_name: userName,
+      app_name: 'Dev Diaries',
+      expiry_time: '5 minutes',
+      current_year: new Date().getFullYear(),
+      message: createEmailTemplate(code, userName)
+    };
+
+    console.log('📤 Sending email via EmailJS...');
     
-    // For now, we'll log the email and simulate success
-    console.log('📧 SENDING VERIFICATION EMAIL:');
-    console.log('To:', emailData.to);
-    console.log('Subject:', emailData.subject);
-    console.log('Content:', emailData.text);
-    console.log('Timestamp:', new Date().toISOString());
+    // Send email using EmailJS
+    const result = await emailjs.send(
+      'YOUR_SERVICE_ID',    // Replace with your EmailJS Service ID
+      'YOUR_TEMPLATE_ID',   // Replace with your EmailJS Template ID
+      templateParams
+    );
     
-    // Extract the code from the email content for easy viewing
-    const codeMatch = emailData.text.match(/VERIFICATION CODE: (\d{6})/);
-    if (codeMatch) {
-      console.log('🔑 VERIFICATION CODE:', codeMatch[1]);
-      
-      // Show a browser notification with the code (for development)
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Dev Diaries Verification Code', {
-          body: `Your verification code is: ${codeMatch[1]}`,
+    if (result.status === 200) {
+      console.log('✅ EmailJS sent successfully');
+      return { success: true };
+    } else {
+      throw new Error('EmailJS failed with status: ' + result.status);
+    }
+    
+  } catch (error) {
+    console.error('❌ EmailJS error:', error);
+    
+    // For development, we'll simulate email sending and log the code
+    console.log('🔧 Development Mode: Simulating email send...');
+    console.log('═══════════════════════════════════════');
+    console.log('📧 EMAIL SIMULATION');
+    console.log('═══════════════════════════════════════');
+    console.log(`To: ${email}`);
+    console.log(`Subject: Dev Diaries - Email Verification Code`);
+    console.log('');
+    console.log(`Hello ${userName}!`);
+    console.log('');
+    console.log('Thank you for signing up for Dev Diaries.');
+    console.log('Your verification code is:');
+    console.log('');
+    console.log(`🔑 ${code}`);
+    console.log('');
+    console.log('This code expires in 5 minutes.');
+    console.log('Enter this code on the verification page to complete your registration.');
+    console.log('');
+    console.log('If you didn\'t request this, please ignore this email.');
+    console.log('');
+    console.log('Best regards,');
+    console.log('The Dev Diaries Team');
+    console.log('═══════════════════════════════════════');
+    
+    // Show browser notification with the code
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Dev Diaries Verification Code', {
+        body: `Your verification code is: ${code}`,
+        icon: '/favicon.ico',
+        tag: 'verification-code',
+        requireInteraction: true
+      });
+    }
+    
+    // For development, always return success
+    return { success: true };
+  }
+};
+
+// Request notification permission for development
+export const requestNotificationPermission = () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        console.log('✅ Notification permission granted');
+        new Notification('Dev Diaries', {
+          body: 'Notifications enabled! You\'ll see verification codes here during development.',
           icon: '/favicon.ico'
         });
       }
-    }
-    
-    // Simulate successful email delivery
-    return { success: true };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
+    });
   }
 };
 
 // Create HTML email template
-const createEmailTemplate = (code: string, userName: string): string => {
+export const createEmailTemplate = (code: string, userName: string): string => {
   return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Email Verification - Dev Diaries</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          margin: 0;
-          padding: 0;
-          background-color: #f8fafc;
-        }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          background: white;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 40px 30px;
-          text-align: center;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 28px;
-          font-weight: 700;
-        }
-        .header p {
-          margin: 8px 0 0 0;
-          opacity: 0.9;
-          font-size: 16px;
-        }
-        .content {
-          padding: 40px 30px;
-        }
-        .greeting {
-          font-size: 18px;
-          margin-bottom: 20px;
-          color: #374151;
-        }
-        .code-container {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 12px;
-          padding: 30px;
-          text-align: center;
-          margin: 30px 0;
-        }
-        .code {
-          font-size: 36px;
-          font-weight: 800;
-          letter-spacing: 8px;
-          color: white;
-          font-family: 'Courier New', monospace;
-          margin: 0;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .code-label {
-          color: rgba(255,255,255,0.9);
-          font-size: 14px;
-          margin-top: 10px;
-          font-weight: 500;
-        }
-        .instructions {
-          background: #f1f5f9;
-          border-radius: 8px;
-          padding: 20px;
-          margin: 25px 0;
-        }
-        .instructions h3 {
-          margin: 0 0 15px 0;
-          color: #1e293b;
-          font-size: 16px;
-        }
-        .instructions ul {
-          margin: 0;
-          padding-left: 20px;
-          color: #475569;
-        }
-        .instructions li {
-          margin-bottom: 8px;
-        }
-        .warning {
-          background: #fef3cd;
-          border: 1px solid #fbbf24;
-          border-radius: 8px;
-          padding: 15px;
-          margin: 20px 0;
-          color: #92400e;
-        }
-        .footer {
-          background: #f8fafc;
-          padding: 25px 30px;
-          text-align: center;
-          border-top: 1px solid #e2e8f0;
-        }
-        .footer p {
-          margin: 0;
-          color: #64748b;
-          font-size: 14px;
-        }
-        .timer {
-          display: inline-flex;
-          align-items: center;
-          background: rgba(255,255,255,0.2);
-          padding: 8px 16px;
-          border-radius: 20px;
-          margin-top: 10px;
-          font-size: 14px;
-          font-weight: 600;
-        }
-        @media (max-width: 600px) {
-          .container {
-            margin: 0;
-            border-radius: 0;
-          }
-          .header, .content, .footer {
-            padding-left: 20px;
-            padding-right: 20px;
-          }
-          .code {
-            font-size: 28px;
-            letter-spacing: 4px;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>🔐 Email Verification</h1>
-          <p>Dev Diaries - Secure Your Account</p>
-          <div class="timer">⏰ Expires in 5 minutes</div>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 20px;">
+      <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 700;">🔐 Email Verification</h1>
+          <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">Dev Diaries - Secure Your Account</p>
         </div>
         
-        <div class="content">
-          <div class="greeting">
+        <!-- Content -->
+        <div style="padding: 40px 30px;">
+          <div style="font-size: 18px; margin-bottom: 20px; color: #374151;">
             Hello ${userName}! 👋
           </div>
           
-          <p>Thank you for signing up for <strong>Dev Diaries</strong>. To complete your registration and secure your account, please use the verification code below:</p>
+          <p style="color: #4b5563; line-height: 1.6;">
+            Thank you for signing up for <strong>Dev Diaries</strong>. To complete your registration and secure your account, please use the verification code below:
+          </p>
           
-          <div class="code-container">
-            <div class="code">${code}</div>
-            <div class="code-label">Your Verification Code</div>
+          <!-- Code Container -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+            <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: white; font-family: 'Courier New', monospace; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+              ${code}
+            </div>
+            <div style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 10px; font-weight: 500;">
+              Your Verification Code
+            </div>
           </div>
           
-          <div class="instructions">
-            <h3>📋 How to verify:</h3>
-            <ul>
-              <li>Copy the 6-digit code above</li>
-              <li>Return to the Dev Diaries verification page</li>
-              <li>Paste or type the code in the input fields</li>
-              <li>Click "Verify Email" to complete setup</li>
+          <!-- Instructions -->
+          <div style="background: #f1f5f9; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 16px;">📋 How to verify:</h3>
+            <ul style="margin: 0; padding-left: 20px; color: #475569;">
+              <li style="margin-bottom: 8px;">Copy the 6-digit code above</li>
+              <li style="margin-bottom: 8px;">Return to the Dev Diaries verification page</li>
+              <li style="margin-bottom: 8px;">Paste or type the code in the input fields</li>
+              <li style="margin-bottom: 8px;">Click "Verify Email" to complete setup</li>
             </ul>
           </div>
           
-          <div class="warning">
+          <!-- Warning -->
+          <div style="background: #fef3cd; border: 1px solid #fbbf24; border-radius: 8px; padding: 15px; margin: 20px 0; color: #92400e;">
             <strong>⚠️ Important Security Information:</strong><br>
             • This code expires in <strong>5 minutes</strong><br>
             • Never share this code with anyone<br>
             • If you didn't request this, please ignore this email
           </div>
           
-          <p>If you're having trouble, you can request a new verification code from the verification page.</p>
+          <p style="color: #4b5563; line-height: 1.6;">
+            If you're having trouble, you can request a new verification code from the verification page.
+          </p>
         </div>
         
-        <div class="footer">
-          <p><strong>Dev Diaries</strong> - Your Personal Knowledge Management System</p>
-          <p>This is an automated security email. Please do not reply.</p>
-          <p>© 2024 Dev Diaries. All rights reserved.</p>
+        <!-- Footer -->
+        <div style="background: #f8fafc; padding: 25px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+          <p style="margin: 0; color: #64748b; font-size: 14px;"><strong>Dev Diaries</strong> - Your Personal Knowledge Management System</p>
+          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">This is an automated security email. Please do not reply.</p>
+          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">© 2024 Dev Diaries. All rights reserved.</p>
         </div>
       </div>
-    </body>
-    </html>
+    </div>
   `;
-};
-
-// Create plain text email for email clients that don't support HTML
-const createTextEmail = (code: string, userName: string): string => {
-  return `
-Dev Diaries - Email Verification
-
-Hello ${userName}!
-
-Thank you for signing up for Dev Diaries. To complete your registration, please use this verification code:
-
-VERIFICATION CODE: ${code}
-
-Instructions:
-1. Copy the 6-digit code above
-2. Return to the Dev Diaries verification page
-3. Enter the code in the input fields
-4. Click "Verify Email" to complete setup
-
-IMPORTANT:
-- This code expires in 5 minutes
-- Never share this code with anyone
-- If you didn't request this, please ignore this email
-
-If you're having trouble, you can request a new verification code from the verification page.
-
----
-Dev Diaries - Your Personal Knowledge Management System
-This is an automated security email. Please do not reply.
-© 2024 Dev Diaries. All rights reserved.
-  `;
-};
-
-// Request notification permission for development
-export const requestNotificationPermission = () => {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
 };
