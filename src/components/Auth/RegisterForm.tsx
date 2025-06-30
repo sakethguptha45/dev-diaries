@@ -66,8 +66,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
             <div className="text-center">
               <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-sm text-green-800">
-                  Please check your email and click the verification link to complete your registration.
+                <p className="text-sm text-green-800 mb-3">
+                  <strong>Please check your email and click the verification link to activate your account.</strong>
+                </p>
+                <p className="text-xs text-green-700">
+                  After clicking the link, you will be redirected back to the login page where you can sign in to your new account.
                 </p>
               </div>
               

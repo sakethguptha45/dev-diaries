@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface LoginFormData {
@@ -17,12 +17,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVerificationSuccess, setShowVerificationSuccess] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<LoginFormData>();
+
+  // Check for email verification success on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const type = urlParams.get('type');
+    
+    // Check if this is an email confirmation redirect
+    if (accessToken && type === 'signup') {
+      setShowVerificationSuccess(true);
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Hide success message after 3 seconds
+      const timer = setTimeout(() => {
+        setShowVerificationSuccess(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
@@ -43,6 +66,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
       <div className="max-w-md w-full space-y-8">
+        {/* Email Verification Success Message */}
+        {showVerificationSuccess && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-lg backdrop-blur-sm">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-800">
+                    Account successfully activated
+                  </p>
+                  <p className="text-xs text-green-600">
+                    You can now sign in to your account
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <BookOpen className="h-8 w-8 text-white" />

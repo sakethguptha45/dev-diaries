@@ -112,6 +112,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
+      // Get the current origin for redirect URL
+      const redirectUrl = `${window.location.origin}/`;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -119,6 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: {
             name: name,
           },
+          emailRedirectTo: redirectUrl,
         },
       });
 
