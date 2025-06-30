@@ -50,6 +50,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
+        
         if (event === 'SIGNED_IN' && session?.user) {
           const user: User = {
             id: session.user.id,
@@ -62,13 +64,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ 
             user, 
             isAuthenticated: true, 
-            loading: false 
+            loading: false,
+            verification: initialVerificationState // Clear verification state on successful login
           });
         } else if (event === 'SIGNED_OUT') {
           set({ 
             user: null, 
             isAuthenticated: false, 
-            loading: false 
+            loading: false,
+            verification: initialVerificationState
           });
         }
       });
@@ -119,7 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
-      console.log('🔄 Starting Supabase OTP registration process...');
+      console.log('🔄 Starting registration process for:', email);
       
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -138,9 +142,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('📧 Using Supabase built-in OTP system...');
+      console.log('📧 Attempting Supabase signup with email confirmation...');
 
-      // Use Supabase's built-in OTP system
+      // First, try the standard signup with email confirmation
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -148,8 +152,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: {
             name: name,
           },
-          // This will trigger Supabase to send an OTP instead of a confirmation link
-          emailRedirectTo: undefined,
+          // Don't set emailRedirectTo to trigger OTP instead of magic link
         },
       });
 
@@ -174,44 +177,71 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (data.user) {
-        console.log('✅ User created, email confirmation required');
+        console.log('✅ User created successfully:', {
+          id: data.user.id,
+          email: data.user.email,
+          emailConfirmed: data.user.email_confirmed_at,
+          needsConfirmation: !data.session
+        });
         
-        // Set up verification state
-        set(state => ({
-          verification: {
-            ...state.verification,
-            isVerifying: true,
-            email: email,
-            timeRemaining: 300, // 5 minutes
-            canResend: false,
-            lastCodeSent: new Date(),
-          }
-        }));
-
-        // Start countdown timer
-        const startTimer = () => {
-          const updateTimer = () => {
-            const currentState = get();
-            const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
-            
-            set(state => ({
-              verification: {
-                ...state.verification,
-                timeRemaining,
-                canResend: timeRemaining === 0,
-              }
-            }));
-
-            if (timeRemaining > 0) {
-              setTimeout(updateTimer, 1000);
+        // Check if user needs email confirmation
+        if (!data.session) {
+          console.log('📧 Email confirmation required, setting up verification state...');
+          
+          // Set up verification state
+          set(state => ({
+            verification: {
+              ...state.verification,
+              isVerifying: true,
+              email: email,
+              timeRemaining: 300, // 5 minutes
+              canResend: false,
+              lastCodeSent: new Date(),
             }
-          };
-          updateTimer();
-        };
+          }));
 
-        startTimer();
-        
-        return { success: true, needsVerification: true };
+          // Start countdown timer
+          const startTimer = () => {
+            const updateTimer = () => {
+              const currentState = get();
+              const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
+              
+              set(state => ({
+                verification: {
+                  ...state.verification,
+                  timeRemaining,
+                  canResend: timeRemaining === 0,
+                }
+              }));
+
+              if (timeRemaining > 0) {
+                setTimeout(updateTimer, 1000);
+              }
+            };
+            updateTimer();
+          };
+
+          startTimer();
+          
+          return { success: true, needsVerification: true };
+        } else {
+          // User is immediately signed in (email confirmation disabled)
+          console.log('✅ User signed in immediately (no email confirmation required)');
+          
+          const user: User = {
+            id: data.user.id,
+            email: data.user.email || '',
+            name: data.user.user_metadata?.name || name,
+            isEmailVerified: true,
+            createdAt: new Date(data.user.created_at)
+          };
+          
+          set({ 
+            user, 
+            isAuthenticated: true 
+          });
+          return { success: true, needsVerification: false };
+        }
       }
 
       return { success: false, errorMessage: 'Registration failed. Please try again.' };
@@ -245,23 +275,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   sendVerificationCode: async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      console.log('📧 Sending OTP via Supabase to:', email);
+      console.log('📧 Sending verification code to:', email);
       
-      // Use Supabase's resend functionality
+      // Use Supabase's resend functionality for signup confirmation
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
       });
 
       if (error) {
-        console.error('❌ Failed to send OTP:', error);
+        console.error('❌ Failed to send verification code:', error);
+        
+        // Provide more specific error messages
+        if (error.message.includes('rate limit')) {
+          return { 
+            success: false, 
+            message: 'Too many requests. Please wait a moment before requesting another code.' 
+          };
+        }
+        
+        if (error.message.includes('not found') || error.message.includes('invalid')) {
+          return { 
+            success: false, 
+            message: 'Email address not found. Please check your email and try again.' 
+          };
+        }
+        
         return { 
           success: false, 
           message: error.message || 'Failed to send verification code' 
         };
       }
 
-      console.log('✅ OTP sent successfully via Supabase');
+      console.log('✅ Verification code sent successfully');
       
       // Update verification state
       set(state => ({
@@ -303,13 +349,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       return { 
         success: true, 
-        message: 'Verification code sent to your email address. Please check your inbox.' 
+        message: 'Verification code sent! Please check your email inbox (and spam folder).' 
       };
     } catch (error) {
       console.error('Error sending verification code:', error);
       return { 
         success: false, 
-        message: 'Failed to send verification code. Please try again.' 
+        message: 'Network error. Please check your connection and try again.' 
       };
     }
   },
@@ -318,7 +364,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔍 Verifying OTP code via Supabase:', code);
+      console.log('🔍 Verifying code:', code, 'for email:', verification.email);
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found. Please request a new code.' };
@@ -377,9 +423,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           };
         }
         
+        // Provide more specific error messages
+        if (error.message.includes('expired')) {
+          return { 
+            success: false, 
+            message: 'Verification code has expired. Please request a new one.' 
+          };
+        }
+        
+        if (error.message.includes('invalid') || error.message.includes('not found')) {
+          return { 
+            success: false, 
+            message: `Invalid verification code. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`
+          };
+        }
+        
         return { 
           success: false, 
-          message: `Invalid verification code. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`
+          message: `Verification failed. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`
         };
       }
 
@@ -413,7 +474,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Error verifying code:', error);
       return { 
         success: false, 
-        message: 'An error occurred during verification. Please try again.' 
+        message: 'Network error. Please check your connection and try again.' 
       };
     }
   },
@@ -422,7 +483,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔄 Resending OTP via Supabase');
+      console.log('🔄 Resending verification code to:', verification.email);
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found.' };
@@ -444,14 +505,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error) {
-        console.error('❌ Failed to resend OTP:', error);
+        console.error('❌ Failed to resend verification code:', error);
+        
+        if (error.message.includes('rate limit')) {
+          return { 
+            success: false, 
+            message: 'Too many requests. Please wait a moment before requesting another code.' 
+          };
+        }
+        
         return { 
           success: false, 
           message: error.message || 'Failed to resend verification code' 
         };
       }
       
-      console.log('✅ New OTP sent successfully');
+      console.log('✅ New verification code sent successfully');
       
       // Reset verification state
       set(state => ({
@@ -489,12 +558,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       startTimer();
       
-      return { success: true, message: 'New verification code sent to your email!' };
+      return { success: true, message: 'New verification code sent! Please check your email.' };
     } catch (error) {
       console.error('Error resending code:', error);
       return { 
         success: false, 
-        message: 'Failed to resend verification code. Please try again.' 
+        message: 'Network error. Please check your connection and try again.' 
       };
     }
   },

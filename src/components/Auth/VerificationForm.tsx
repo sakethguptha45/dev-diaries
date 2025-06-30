@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Clock, RefreshCw, CheckCircle, AlertCircle, Mail, ArrowLeft, Wifi, WifiOff, Inbox } from 'lucide-react';
+import { Shield, Clock, RefreshCw, CheckCircle, AlertCircle, Mail, ArrowLeft, Wifi, WifiOff, Inbox, HelpCircle, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface VerificationFormProps {
@@ -21,6 +21,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Monitor network connectivity
@@ -36,6 +37,17 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Auto-show troubleshooting after 2 minutes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!success && !verification.isLocked) {
+        setShowTroubleshooting(true);
+      }
+    }, 120000); // 2 minutes
+
+    return () => clearTimeout(timer);
+  }, [success, verification.isLocked]);
 
   // Format time as mm:ss
   const formatTime = (seconds: number): string => {
@@ -242,10 +254,44 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               <div className="text-sm">
                 <p className="font-medium text-blue-900">📧 Check your email inbox</p>
                 <p className="text-blue-700">Look for an email from Supabase with your 6-digit verification code</p>
-                <p className="text-blue-600 text-xs mt-1">Don't forget to check your spam/junk folder!</p>
+                <p className="text-blue-600 text-xs mt-1">
+                  <strong>Important:</strong> Check your spam/junk folder if you don't see it!
+                </p>
               </div>
             </div>
           </motion.div>
+
+          {/* Troubleshooting Section */}
+          <AnimatePresence>
+            {showTroubleshooting && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
+              >
+                <div className="flex items-start space-x-3">
+                  <HelpCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-yellow-900 mb-2">🤔 Not receiving the code?</p>
+                    <ul className="text-yellow-800 space-y-1 text-xs">
+                      <li>• Check your spam/junk folder</li>
+                      <li>• Wait a few minutes - emails can be delayed</li>
+                      <li>• Make sure you entered the correct email address</li>
+                      <li>• Try requesting a new code using the button below</li>
+                      <li>• Check if your email provider blocks automated emails</li>
+                    </ul>
+                    <button
+                      onClick={() => setShowTroubleshooting(false)}
+                      className="text-yellow-700 hover:text-yellow-900 text-xs mt-2 underline"
+                    >
+                      Hide troubleshooting
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Timer and Status */}
           <div className="text-center mb-6">
@@ -405,6 +451,15 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               </span>
             </motion.button>
 
+            {!showTroubleshooting && (
+              <button
+                onClick={() => setShowTroubleshooting(true)}
+                className="block mx-auto text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
+              >
+                Not receiving the code? Click for help
+              </button>
+            )}
+
             <div className="flex items-center justify-center space-x-4 text-sm">
               <button
                 onClick={onBack}
@@ -446,6 +501,8 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
               <p>Time remaining: {verification.timeRemaining}s</p>
               <p>Can resend: {canResend ? 'Yes' : 'No'}</p>
               <p>Attempts: {verification.attempts}/{verification.maxAttempts}</p>
+              <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing'}</p>
+              <p>Supabase Key: {import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}</p>
             </div>
           )}
         </div>
