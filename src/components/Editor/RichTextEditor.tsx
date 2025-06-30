@@ -113,14 +113,29 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // Update editor content when content prop changes
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+      editor.commands.setContent(content, false);
     }
   }, [editor, content]);
 
+  // Update editable state when prop changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
+
   const addImage = useCallback(() => {
+    if (!editor) return;
+    
     const url = window.prompt('Enter image URL:');
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+    if (url) {
+      // Validate URL format
+      try {
+        new URL(url);
+        editor.chain().focus().setImage({ src: url }).run();
+      } catch (error) {
+        alert('Please enter a valid URL');
+      }
     }
   }, [editor]);
 
