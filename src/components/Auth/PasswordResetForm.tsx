@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Lock, CheckCircle, AlertCircle, Shield, ArrowRight, Zap } from 'lucide-react';
+import { Eye, EyeOff, Lock, CheckCircle, AlertCircle, Shield, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface PasswordResetFormData {
@@ -67,39 +67,9 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
     checkSession();
   }, []);
 
-  // Password strength calculation
-  const getPasswordStrength = (password: string) => {
-    if (!password) return { score: 0, label: '', color: '', requirements: {} };
-    
-    const requirements = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-
-    const score = Object.values(requirements).filter(Boolean).length;
-    
-    const strengthLevels = [
-      { label: 'Very Weak', color: 'bg-red-500', textColor: 'text-red-600' },
-      { label: 'Weak', color: 'bg-orange-500', textColor: 'text-orange-600' },
-      { label: 'Fair', color: 'bg-yellow-500', textColor: 'text-yellow-600' },
-      { label: 'Good', color: 'bg-blue-500', textColor: 'text-blue-600' },
-      { label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600' }
-    ];
-
-    return {
-      score,
-      requirements,
-      isValid: score === 5,
-      ...strengthLevels[Math.min(score, 4)]
-    };
-  };
-
-  const passwordStrength = getPasswordStrength(newPassword || '');
   const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
-  const canSubmit = passwordStrength.isValid && passwordsMatch && !loading;
+  const passwordValid = newPassword && newPassword.length >= 6;
+  const canSubmit = passwordValid && passwordsMatch && !loading;
 
   const onSubmit = async (data: PasswordResetFormData) => {
     if (!sessionValid) {
@@ -227,8 +197,8 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
           >
             <Shield className="h-8 w-8 text-white" />
           </motion.div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Reset Your Password</h2>
-          <p className="text-gray-600">Create a strong, secure password for your account</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Create New Password</h2>
+          <p className="text-gray-600">Enter a new password for your account</p>
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
@@ -258,9 +228,9 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
                 <input
                   {...register('newPassword', {
                     required: 'New password is required',
-                    validate: (value) => {
-                      const strength = getPasswordStrength(value);
-                      return strength.isValid || 'Password must meet all requirements';
+                    minLength: {
+                      value: 6,
+                      message: 'Password must be at least 6 characters'
                     }
                   })}
                   type={showNewPassword ? 'text' : 'password'}
@@ -280,29 +250,17 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
                 </button>
               </div>
               
-              {/* Password Strength Indicator */}
-              {newPassword && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3"
-                >
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
-                        style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
-                      />
-                    </div>
-                    <span className={`text-xs font-medium ${passwordStrength.textColor}`}>
-                      {passwordStrength.label}
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-              
               {errors.newPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.newPassword.message}</p>
+              )}
+              
+              {/* Password validation indicator */}
+              {newPassword && (
+                <div className="mt-2">
+                  <div className={`text-sm ${passwordValid ? 'text-green-600' : 'text-red-600'}`}>
+                    {passwordValid ? '✓ Password meets requirements' : '✗ Password must be at least 6 characters'}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -364,38 +322,11 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
 
             {/* Password Requirements */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-blue-900 mb-3 flex items-center">
-                <Zap className="h-4 w-4 mr-2" />
-                Password Requirements:
-              </p>
-              <div className="space-y-2">
-                {[
-                  { key: 'length', label: 'At least 8 characters', test: passwordStrength.requirements.length },
-                  { key: 'uppercase', label: 'One uppercase letter (A-Z)', test: passwordStrength.requirements.uppercase },
-                  { key: 'lowercase', label: 'One lowercase letter (a-z)', test: passwordStrength.requirements.lowercase },
-                  { key: 'number', label: 'One number (0-9)', test: passwordStrength.requirements.number },
-                  { key: 'special', label: 'One special character (!@#$%^&*)', test: passwordStrength.requirements.special }
-                ].map((requirement) => (
-                  <div key={requirement.key} className={`flex items-center space-x-2 text-sm transition-colors duration-200 ${
-                    requirement.test ? 'text-green-700' : 'text-blue-800'
-                  }`}>
-                    <span className="w-4 h-4 flex items-center justify-center">
-                      {requirement.test ? '✓' : '•'}
-                    </span>
-                    <span>{requirement.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Security Notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="text-sm text-amber-800">
-                <p className="font-medium mb-2">🔒 Security Notice:</p>
-                <div className="space-y-1 text-xs">
-                  <p>• Your new password must be different from your previous password</p>
-                  <p>• You'll be automatically signed out after the password is updated</p>
-                  <p>• Use your new password to sign in to your account</p>
+              <p className="text-sm font-medium text-blue-900 mb-2">Password Requirements:</p>
+              <div className="text-xs text-blue-800 space-y-1">
+                <div className={`flex items-center space-x-2 ${newPassword?.length >= 6 ? 'text-green-700' : ''}`}>
+                  <span>{newPassword?.length >= 6 ? '✓' : '•'}</span>
+                  <span>At least 6 characters (letters or numbers)</span>
                 </div>
               </div>
             </div>
@@ -415,11 +346,11 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Resetting Password...</span>
+                  <span>Updating Password...</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
-                  <span>Reset Password</span>
+                  <span>Update Password</span>
                   <ArrowRight className="h-4 w-4" />
                 </div>
               )}

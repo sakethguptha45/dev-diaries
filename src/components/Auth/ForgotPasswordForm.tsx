@@ -137,15 +137,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
                 </div>
               </div>
               
-              <motion.button
-                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(59, 130, 246, 0.3)" }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onBack}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/25 transition-all duration-300"
-              >
-                Sign in with new password
-                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-              </motion.button>
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                <span className="ml-3 text-gray-600">Redirecting to sign in...</span>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -175,32 +170,6 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-          {/* Information Notice */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-            <div className="text-sm">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-bold">📧</span>
-                </div>
-                <p className="font-semibold text-blue-900">Password Reset Process</p>
-              </div>
-              <div className="text-blue-800 space-y-2 text-xs">
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>1. Verification code:</strong> You'll receive a 6-digit code via email
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>2. Code expires in 10 minutes:</strong> Enter it quickly
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>3. Create new password:</strong> Must be different from previous
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>4. Sign in:</strong> Use your new password to access your account
-                </div>
-              </div>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Error Message */}
             <AnimatePresence>
@@ -243,19 +212,6 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
               <p className="mt-1 text-xs text-gray-500">
                 💡 Use the same email you used to create your account
               </p>
-            </div>
-
-            {/* Security Info */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="text-sm text-amber-800">
-                <p className="font-medium mb-1">🔒 Security Notice:</p>
-                <div className="space-y-1 text-xs">
-                  <p>• We'll send a 6-digit verification code to your email</p>
-                  <p>• The code expires in 10 minutes for security</p>
-                  <p>• Your new password must be different from your previous one</p>
-                  <p>• Check your spam folder if you don't see the email</p>
-                </div>
-              </div>
             </div>
 
             {/* Submit Button */}
