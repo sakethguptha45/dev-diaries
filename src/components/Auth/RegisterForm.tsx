@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { VerificationForm } from './VerificationForm';
 
 interface RegisterFormData {
   name: string;
@@ -54,18 +53,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     }
   };
 
-  const handleVerificationSuccess = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      onToggleMode(); // Go back to login
-    }, 3000);
-  };
-
-  const handleBackToRegister = () => {
-    setShowVerification(false);
-    setUserEmail('');
-  };
-
   if (showSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4">
@@ -101,11 +88,42 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
 
   if (showVerification) {
     return (
-      <VerificationForm
-        email={userEmail}
-        onBack={handleBackToRegister}
-        onSuccess={handleVerificationSuccess}
-      />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+            <p className="text-gray-600">
+              We've sent a verification link to{' '}
+              <span className="font-semibold text-indigo-600">{userEmail}</span>
+            </p>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+            <div className="text-center space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  📧 Please check your email and click the verification link
+                </p>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p>✓ Check your inbox and spam folder</p>
+                  <p>✓ Click the verification link in the email</p>
+                  <p>✓ You'll be redirected back to sign in</p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setShowVerification(false)}
+                className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              >
+                ← Back to registration
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -121,35 +139,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-          {/* Enhanced Information Notice */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-            <div className="text-sm">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-bold">📧</span>
-                </div>
-                <p className="font-semibold text-blue-900">Email Verification with OTP Code</p>
-              </div>
-              <div className="text-blue-800 space-y-2 text-xs">
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>✓ You will receive a 6-digit verification code</strong> (not a link!)
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>✓ Check your email inbox AND spam folder</strong>
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>✓ Look for email from Supabase</strong> with subject containing "verification"
-                </div>
-                <div className="bg-blue-100 p-2 rounded">
-                  <strong>✓ Code expires in 5 minutes</strong> - you can request a new one if needed
-                </div>
-              </div>
-              <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs text-yellow-800">
-                <strong>💡 Pro tip:</strong> Gmail users should check the "Promotions" tab. Corporate emails may block automated messages.
-              </div>
-            </div>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -203,9 +192,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
-              <p className="mt-1 text-xs text-gray-500">
-                💡 Use Gmail for best delivery rates. Avoid corporate emails if possible.
-              </p>
             </div>
 
             <div>

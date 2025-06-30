@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ForgotPasswordForm } from './ForgotPasswordForm';
 
 interface LoginFormData {
   email: string;
@@ -12,15 +11,15 @@ interface LoginFormData {
 
 interface LoginFormProps {
   onToggleMode: () => void;
+  onForgotPassword?: () => void;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPassword }) => {
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const {
     register,
@@ -65,10 +64,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       setLoading(false);
     }
   };
-
-  if (showForgotPassword) {
-    return <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
@@ -177,15 +172,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             </div>
 
             {/* Forgot Password Link */}
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
-              >
-                Forgot your password?
-              </button>
-            </div>
+            {onForgotPassword && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-sm text-blue-600 hover:text-blue-500 transition-colors duration-200"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
 
             <button
               type="submit"
