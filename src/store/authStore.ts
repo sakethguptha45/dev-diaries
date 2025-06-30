@@ -150,12 +150,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state regardless of server response
       set({ 
         user: null, 
         isAuthenticated: false 
       });
-    } catch (error) {
-      console.error('Logout error:', error);
     }
   }
 }));
