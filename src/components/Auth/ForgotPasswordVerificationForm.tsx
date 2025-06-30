@@ -147,7 +147,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
         inputRefs.current[0]?.focus();
       } else if (data.session) {
         console.log('✅ Password reset verification successful');
-        setSuccess('Code verified! You can now create a new password.');
+        setSuccess('Code verified! Redirecting to password reset...');
         
         // Set the session for password reset - this is crucial!
         await supabase.auth.setSession(data.session);
@@ -360,7 +360,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
                 <span>Verifying...</span>
               </div>
             ) : (
-              'Verify Code'
+              'Verify Code & Continue'
             )}
           </motion.button>
 
