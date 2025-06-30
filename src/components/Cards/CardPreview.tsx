@@ -27,6 +27,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({
     onToggleFavorite(card.id);
   };
 
+
   // Normalize date to avoid timezone issues - same as Dashboard
   const normalizeDate = (date: Date | string): Date => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -36,6 +37,7 @@ export const CardPreview: React.FC<CardPreviewProps> = ({
 
   // Use the same normalization as Dashboard for consistency
   const displayDate = normalizeDate(card.updatedAt);
+
 
   return (
     <div
