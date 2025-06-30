@@ -1,40 +1,51 @@
 import React from 'react';
+
+import { motion } from 'framer-motion';
+
 import { Loader2 } from 'lucide-react';
+
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   color?: 'blue' | 'white' | 'gray';
   text?: string;
+
   className?: string;
+
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'md',
   color = 'blue',
-  text,
-  className = ''
+
+  text
 }) => {
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8'
+    sm: 'h-4 w-4',
+    md: 'h-8 w-8',
+    lg: 'h-12 w-12'
   };
 
   const colorClasses = {
-    blue: 'text-blue-600',
-    white: 'text-white',
-    gray: 'text-gray-600'
+    blue: 'border-blue-500',
+    white: 'border-white',
+    gray: 'border-gray-500'
   };
 
   return (
-    <div className={`flex items-center justify-center gap-3 ${className}`}>
-      <Loader2 
-        className={`animate-spin ${sizeClasses[size]} ${colorClasses[color]}`} 
+    <div className="flex flex-col items-center justify-center space-y-3">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        className={`
+          ${sizeClasses[size]}
+          ${colorClasses[color]}
+          border-2 border-t-transparent rounded-full
+        `}
       />
       {text && (
-        <span className={`text-sm font-medium ${colorClasses[color]}`}>
-          {text}
-        </span>
+        <p className="text-sm text-gray-600">{text}</p>
+
       )}
     </div>
   );
