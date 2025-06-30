@@ -19,7 +19,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const {
     register,
@@ -38,9 +40,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       const result = await registerUser(data.email, data.password, data.name);
       if (result.success) {
         if (result.needsVerification) {
-          setSuccess(true);
+          setUserEmail(data.email);
+          setShowVerification(true);
         }
-        // If no verification needed, user will be automatically logged in
       } else {
         setError(result.errorMessage || 'Registration failed. Please try again.');
       }
@@ -51,31 +53,72 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     }
   };
 
-  if (success) {
+  if (showSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-gray-600">We've sent a verification link to your email address</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Account Activated!</h2>
+            <p className="text-gray-600">Your account has been successfully verified</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
             <div className="text-center">
               <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-sm text-green-800">
-                  Please check your email and click the verification link to complete your registration.
+                <p className="text-sm text-green-800 mb-3">
+                  <strong>🎉 Welcome to Dev Diaries!</strong>
+                </p>
+                <p className="text-xs text-green-700">
+                  Your email has been verified and your account is now active. Redirecting to sign in...
                 </p>
               </div>
               
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+              <Mail className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+            <p className="text-gray-600">
+              We've sent a verification link to{' '}
+              <span className="font-semibold text-indigo-600">{userEmail}</span>
+            </p>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+            <div className="text-center space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  📧 Please check your email and click the verification link
+                </p>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <p>✓ Check your inbox and spam folder</p>
+                  <p>✓ Click the verification link in the email</p>
+                  <p>✓ You'll be redirected back to sign in</p>
+                </div>
+              </div>
+              
               <button
-                onClick={onToggleMode}
-                className="text-sm text-purple-600 hover:text-purple-500 transition-colors duration-200"
+                onClick={() => setShowVerification(false)}
+                className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
               >
-                Back to sign in
+                ← Back to registration
               </button>
             </div>
           </div>
@@ -213,7 +256,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Creating account...</span>
+                </div>
+              ) : (
+                'Create account'
+              )}
             </button>
           </form>
 

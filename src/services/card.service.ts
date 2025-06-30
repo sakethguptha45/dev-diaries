@@ -1,13 +1,50 @@
 import { supabase } from '../lib/supabase';
-import { Card, CreateCardData, UpdateCardData } from '../types';
 
-export const cardService = {
-  async createCard(cardData: CreateCardData): Promise<Card | null> {
+import { Card } from '../types';
+
+export interface CardCreateData {
+  title: string;
+  type: 'note' | 'code' | 'link' | 'file';
+  content: string;
+  explanation: string;
+  links: string[];
+  files: any[];
+  tags: string[];
+  favorite: boolean;
+  userId: string;
+}
+
+export interface CardUpdateData {
+  title?: string;
+  type?: 'note' | 'code' | 'link' | 'file';
+  content?: string;
+  explanation?: string;
+  links?: string[];
+  files?: any[];
+  tags?: string[];
+  favorite?: boolean;
+}
+
+export interface CardResponse {
+  success: boolean;
+  card?: Card;
+  cards?: Card[];
+  error?: string;
+}
+
+export class CardService {
+  /**
+   * Create a new card
+   */
+  static async createCard(cardData: CardCreateData): Promise<CardResponse> {
+
     try {
       const { data, error } = await supabase
         .from('cards')
         .insert({
+
           user_id: cardData.userId,
+
           title: cardData.title,
           type: cardData.type,
           content: cardData.content,
@@ -15,12 +52,16 @@ export const cardService = {
           links: cardData.links,
           files: cardData.files,
           tags: cardData.tags,
-          favorite: cardData.favorite
+
+          favorite: cardData.favorite,
+          user_id: cardData.userId
+
         })
         .select()
         .single();
 
       if (error) {
+
         console.error('Error creating card:', error);
         return null;
       }
@@ -61,6 +102,7 @@ export const cardService = {
       if (updates.tags !== undefined) updateData.tags = updates.tags;
       if (updates.favorite !== undefined) updateData.favorite = updates.favorite;
       
+
       updateData.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
@@ -71,6 +113,7 @@ export const cardService = {
         .single();
 
       if (error) {
+
         console.error('Error updating card:', error);
         return null;
       }
@@ -100,6 +143,7 @@ export const cardService = {
   },
 
   async deleteCard(id: string): Promise<boolean> {
+]
     try {
       const { error } = await supabase
         .from('cards')
@@ -107,6 +151,7 @@ export const cardService = {
         .eq('id', id);
 
       if (error) {
+
         console.error('Error deleting card:', error);
         return false;
       }
@@ -141,11 +186,13 @@ export const cardService = {
   },
 
   async getUserCards(userId: string): Promise<Card[]> {
+
     try {
       const { data, error } = await supabase
         .from('cards')
         .select('*')
         .eq('user_id', userId)
+
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -176,10 +223,12 @@ export const cardService = {
   },
 
   async getCardById(id: string): Promise<Card | null> {
+
     try {
       const { data, error } = await supabase
         .from('cards')
         .select('*')
+
         .eq('id', id)
         .single();
 
@@ -212,3 +261,4 @@ export const cardService = {
     }
   }
 };
+
