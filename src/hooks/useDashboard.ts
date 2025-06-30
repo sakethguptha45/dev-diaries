@@ -18,7 +18,6 @@ export const useDashboard = (searchQuery?: string) => {
     getRecentCards,
     getFavoriteCards,
     getAllTags,
-    searchQuery: globalSearchQuery,
     searchCards
   } = useCardStore();
 
@@ -76,7 +75,9 @@ export const useDashboard = (searchQuery?: string) => {
   // Filter cards based on search query and selected tags
   const filteredCards = useMemo(() => {
     let filtered = [...userCards];
-    const currentQuery = searchQuery || debouncedSearchQuery || globalSearchQuery;
+    
+    // Use the current search query (prioritize prop, then local, then debounced)
+    const currentQuery = searchQuery || localSearchQuery || debouncedSearchQuery;
 
     // Apply search filter
     if (currentQuery?.trim()) {
@@ -99,7 +100,7 @@ export const useDashboard = (searchQuery?: string) => {
     }
 
     return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [userCards, searchQuery, debouncedSearchQuery, globalSearchQuery, selectedTags]);
+  }, [userCards, searchQuery, localSearchQuery, debouncedSearchQuery, selectedTags]);
 
   // Get remaining cards (excluding favorites and recent) for dashboard view
   const remainingCards = useMemo(() => {
@@ -136,14 +137,14 @@ export const useDashboard = (searchQuery?: string) => {
   };
 
   const getDisplayCards = () => {
-    const currentQuery = searchQuery || debouncedSearchQuery || globalSearchQuery;
+    const currentQuery = searchQuery || localSearchQuery || debouncedSearchQuery;
     
     switch (activeView) {
       case 'favorites':
         return favoriteCards.filter(card => {
-          if (!currentQuery.trim() && selectedTags.length === 0) return true;
+          if (!currentQuery?.trim() && selectedTags.length === 0) return true;
           
-          const matchesSearch = !currentQuery.trim() || 
+          const matchesSearch = !currentQuery?.trim() || 
             card.title.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.content.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.explanation.toLowerCase().includes(currentQuery.toLowerCase()) ||
@@ -156,9 +157,9 @@ export const useDashboard = (searchQuery?: string) => {
         });
       case 'recent':
         return recentCards.filter(card => {
-          if (!currentQuery.trim() && selectedTags.length === 0) return true;
+          if (!currentQuery?.trim() && selectedTags.length === 0) return true;
           
-          const matchesSearch = !currentQuery.trim() || 
+          const matchesSearch = !currentQuery?.trim() || 
             card.title.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.content.toLowerCase().includes(currentQuery.toLowerCase()) ||
             card.explanation.toLowerCase().includes(currentQuery.toLowerCase()) ||
@@ -177,7 +178,7 @@ export const useDashboard = (searchQuery?: string) => {
   };
 
   // Check if we have search results to show
-  const currentQuery = searchQuery || debouncedSearchQuery || globalSearchQuery;
+  const currentQuery = searchQuery || localSearchQuery || debouncedSearchQuery;
   const hasSearchQuery = currentQuery && currentQuery.trim();
   const hasFilters = selectedTags.length > 0;
   const showSearchResults = hasSearchQuery || hasFilters;

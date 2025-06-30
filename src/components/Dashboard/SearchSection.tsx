@@ -1,8 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
-import { Input } from '../UI/Input';
-import { Button } from '../UI/Button';
 import { UI_CONSTANTS } from '../../constants';
 
 interface SearchSectionProps {
@@ -41,18 +39,20 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         {/* Search Bar */}
         <div className="flex justify-center">
           <div className="relative w-full max-w-2xl">
-            <Input
+            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 pointer-events-none z-10">
+              <Search className="h-5 w-5 text-slate-400" />
+            </div>
+            <input
               type="text"
               placeholder="Search your knowledge base..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              icon={Search}
-              className="w-full bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder-slate-400 focus:ring-blue-500/30 focus:border-blue-400/50"
+              className="w-full pl-14 pr-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400/50 transition-all duration-300 text-base"
             />
             {hasFilters && (
               <button
                 onClick={onClearSearch}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors duration-200 text-lg"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors duration-200 text-lg z-10"
               >
                 <X className="h-5 w-5" />
               </button>
