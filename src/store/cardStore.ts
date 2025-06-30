@@ -144,11 +144,11 @@ export const useCardStore = create<CardState>((set, get) => ({
       const card = get().cards.find(c => c.id === id);
       if (!card) return;
 
+      // Only update the favorite field, don't touch updated_at
       const { data, error } = await supabase
         .from('cards')
         .update({ 
-          favorite: !card.favorite,
-          updated_at: new Date().toISOString()
+          favorite: !card.favorite
         })
         .eq('id', id)
         .select()
@@ -165,8 +165,8 @@ export const useCardStore = create<CardState>((set, get) => ({
             card.id === id
               ? { 
                   ...card, 
-                  favorite: data.favorite, 
-                  updatedAt: new Date(data.updated_at) 
+                  favorite: data.favorite
+                  // Keep the original updatedAt timestamp
                 }
               : card
           ),
