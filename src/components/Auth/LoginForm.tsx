@@ -185,10 +185,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
               </div>
             )}
 
-            <button
-
-            <Button>
-
+            <Button
               type="submit"
               loading={loading}
               className="w-full"

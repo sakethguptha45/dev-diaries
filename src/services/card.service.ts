@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-
 import { Card } from '../types';
 
 export interface CardCreateData {
@@ -37,14 +36,11 @@ export class CardService {
    * Create a new card
    */
   static async createCard(cardData: CardCreateData): Promise<CardResponse> {
-
     try {
       const { data, error } = await supabase
         .from('cards')
         .insert({
-
           user_id: cardData.userId,
-
           title: cardData.title,
           type: cardData.type,
           content: cardData.content,
@@ -52,22 +48,18 @@ export class CardService {
           links: cardData.links,
           files: cardData.files,
           tags: cardData.tags,
-
-          favorite: cardData.favorite,
-          user_id: cardData.userId
-
+          favorite: cardData.favorite
         })
         .select()
         .single();
 
       if (error) {
-
         console.error('Error creating card:', error);
-        return null;
+        return { success: false, error: error.message };
       }
 
       if (data) {
-        return {
+        const card: Card = {
           id: data.id,
           userId: data.user_id,
           title: data.title,
@@ -81,16 +73,17 @@ export class CardService {
           createdAt: new Date(data.created_at),
           updatedAt: new Date(data.updated_at)
         };
+        return { success: true, card };
       }
 
-      return null;
+      return { success: false, error: 'No data returned' };
     } catch (error) {
       console.error('Error creating card:', error);
-      return null;
+      return { success: false, error: 'An unexpected error occurred' };
     }
-  },
+  }
 
-  async updateCard(id: string, updates: UpdateCardData): Promise<Card | null> {
+  static async updateCard(id: string, updates: CardUpdateData): Promise<Card | null> {
     try {
       const updateData: any = {};
       if (updates.title !== undefined) updateData.title = updates.title;
@@ -102,7 +95,6 @@ export class CardService {
       if (updates.tags !== undefined) updateData.tags = updates.tags;
       if (updates.favorite !== undefined) updateData.favorite = updates.favorite;
       
-
       updateData.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase
@@ -113,7 +105,6 @@ export class CardService {
         .single();
 
       if (error) {
-
         console.error('Error updating card:', error);
         return null;
       }
@@ -140,10 +131,9 @@ export class CardService {
       console.error('Error updating card:', error);
       return null;
     }
-  },
+  }
 
-  async deleteCard(id: string): Promise<boolean> {
-]
+  static async deleteCard(id: string): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('cards')
@@ -151,7 +141,6 @@ export class CardService {
         .eq('id', id);
 
       if (error) {
-
         console.error('Error deleting card:', error);
         return false;
       }
@@ -161,9 +150,9 @@ export class CardService {
       console.error('Error deleting card:', error);
       return false;
     }
-  },
+  }
 
-  async toggleFavorite(id: string, currentFavorite: boolean): Promise<boolean> {
+  static async toggleFavorite(id: string, currentFavorite: boolean): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('cards')
@@ -183,16 +172,14 @@ export class CardService {
       console.error('Error toggling favorite:', error);
       return false;
     }
-  },
+  }
 
-  async getUserCards(userId: string): Promise<Card[]> {
-
+  static async getUserCards(userId: string): Promise<Card[]> {
     try {
       const { data, error } = await supabase
         .from('cards')
         .select('*')
         .eq('user_id', userId)
-
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -220,15 +207,13 @@ export class CardService {
       console.error('Error fetching user cards:', error);
       return [];
     }
-  },
+  }
 
-  async getCardById(id: string): Promise<Card | null> {
-
+  static async getCardById(id: string): Promise<Card | null> {
     try {
       const { data, error } = await supabase
         .from('cards')
         .select('*')
-
         .eq('id', id)
         .single();
 
@@ -260,5 +245,4 @@ export class CardService {
       return null;
     }
   }
-};
-
+}
