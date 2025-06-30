@@ -167,19 +167,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Check if user already exists
-      console.log('🔍 Checking if user already exists...');
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('auth.users')
-        .select('email')
-        .eq('email', email)
-        .limit(1);
-
-      // If we can't check (which is normal for RLS), we'll proceed and let Supabase handle duplicates
-      if (checkError) {
-        console.log('ℹ️ Cannot check existing users (normal with RLS)');
-      }
-
       console.log('📝 Starting OTP verification process (NOT creating Supabase account yet)...');
 
       // Store user data temporarily for verification
