@@ -37,7 +37,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
     const error = urlParams.get('error');
     const errorDescription = urlParams.get('error_description');
     
-    // Also check hash parameters (Supabase sometimes uses hash)
+    // Also check hash parameters (Supabase uses hash for auth tokens)
     const hashParams = new URLSearchParams(hash.substring(1));
     const hashAccessToken = hashParams.get('access_token');
     const hashRefreshToken = hashParams.get('refresh_token');
@@ -57,17 +57,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       finalRefreshToken: finalRefreshToken ? 'present' : 'missing',
       finalType,
       finalError,
-      finalErrorDescription
+      finalErrorDescription,
+      currentURL: window.location.href
     });
     
     // Check if this is an email confirmation redirect
     if (finalType === 'signup' && finalAccessToken && finalRefreshToken && !finalError) {
-      console.log('Email verification successful, showing success message');
-      setShowVerificationSuccess(true);
+      console.log('Email verification successful, showing success message and cleaning URL');
       
-      // Clear URL parameters and hash to clean up the URL
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+      // Immediately clean the URL to remove all auth tokens
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Show success message
+      setShowVerificationSuccess(true);
       
       // Hide success message after 3 seconds
       const timer = setTimeout(() => {
@@ -85,8 +88,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       }
       
       // Clear error parameters from URL and hash
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   }, []);
 
