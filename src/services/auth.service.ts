@@ -112,29 +112,15 @@ export const authService = {
 
   async deleteAccount(userId: string): Promise<{ success: boolean; errorMessage?: string }> {
     try {
-      // First delete all user's cards (handled by foreign key cascade)
-      const { error: cardsError } = await supabase
-        .from('cards')
-        .delete()
-        .eq('user_id', userId);
-
-      if (cardsError) {
-        console.error('Error deleting user cards:', cardsError);
-        return { success: false, errorMessage: 'Failed to delete user data' };
-      }
-
-      // Delete the user account
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
-
-      if (deleteError) {
-        console.error('Error deleting user account:', deleteError);
-        return { success: false, errorMessage: 'Failed to delete account' };
-      }
-
-      return { success: true };
+      // Account deletion from client-side is not permitted for security reasons
+      // This operation requires server-side implementation with proper admin privileges
+      return { 
+        success: false, 
+        errorMessage: 'Account deletion must be implemented server-side for security reasons. Please contact support to delete your account.' 
+      };
     } catch (error) {
       console.error('Delete account error:', error);
-      return { success: false, errorMessage: 'An error occurred while deleting account' };
+      return { success: false, errorMessage: 'An error occurred while processing the delete request' };
     }
   },
 
