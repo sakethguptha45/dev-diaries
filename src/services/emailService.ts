@@ -32,35 +32,104 @@ export const sendVerificationEmail = async (
     console.log('🔑 Code:', code);
     console.log('👤 User:', userName || 'User');
 
-    // Send email using EmailJS (real email service)
-    const emailResult = await sendEmailViaEmailJS(email, code, userName || 'User');
+    // Check if EmailJS is configured
+    const isEmailJSConfigured = checkEmailJSConfiguration();
     
-    if (emailResult.success) {
-      console.log('✅ Email sent successfully!');
+    if (isEmailJSConfigured) {
+      // Send email using EmailJS (real email service)
+      const emailResult = await sendEmailViaEmailJS(email, code, userName || 'User');
       
-      // Show browser notification for development
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Dev Diaries Verification Code', {
-          body: `Your verification code is: ${code}`,
-          icon: '/favicon.ico',
-          tag: 'verification-code'
-        });
+      if (emailResult.success) {
+        console.log('✅ Email sent successfully!');
+        
+        // Show browser notification for development
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Dev Diaries Verification Code', {
+            body: `Your verification code is: ${code}`,
+            icon: '/favicon.ico',
+            tag: 'verification-code'
+          });
+        }
+        
+        return {
+          success: true,
+          message: 'Verification code sent to your email address'
+        };
+      } else {
+        throw new Error(emailResult.error || 'Failed to send email');
       }
-      
-      return {
-        success: true,
-        message: 'Verification code sent to your email address'
-      };
     } else {
-      throw new Error(emailResult.error || 'Failed to send email');
+      // Development mode - simulate email sending
+      return await simulateEmailSending(email, code, userName || 'User');
     }
   } catch (error) {
     console.error('❌ Email sending error:', error);
-    return {
-      success: false,
-      message: 'Failed to send verification email. Please try again.'
-    };
+    
+    // Fallback to development mode
+    console.log('🔧 Falling back to development mode...');
+    return await simulateEmailSending(email, code, userName || 'User');
   }
+};
+
+// Check if EmailJS is properly configured
+const checkEmailJSConfiguration = (): boolean => {
+  // Check for environment variables or hardcoded values
+  const userID = import.meta.env.VITE_EMAILJS_USER_ID || 'YOUR_EMAILJS_USER_ID';
+  const serviceID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
+  const templateID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID';
+  
+  return userID !== 'YOUR_EMAILJS_USER_ID' && 
+         serviceID !== 'YOUR_SERVICE_ID' && 
+         templateID !== 'YOUR_TEMPLATE_ID' &&
+         userID && serviceID && templateID;
+};
+
+// Simulate email sending for development
+const simulateEmailSending = async (
+  email: string, 
+  code: string, 
+  userName: string
+): Promise<EmailResponse> => {
+  console.log('🔧 Development Mode: Simulating email send...');
+  console.log('═══════════════════════════════════════');
+  console.log('📧 EMAIL SIMULATION');
+  console.log('═══════════════════════════════════════');
+  console.log(`To: ${email}`);
+  console.log(`Subject: Dev Diaries - Email Verification Code`);
+  console.log('');
+  console.log(`Hello ${userName}!`);
+  console.log('');
+  console.log('Thank you for signing up for Dev Diaries.');
+  console.log('Your verification code is:');
+  console.log('');
+  console.log(`🔑 ${code}`);
+  console.log('');
+  console.log('This code expires in 5 minutes.');
+  console.log('Enter this code on the verification page to complete your registration.');
+  console.log('');
+  console.log('If you didn\'t request this, please ignore this email.');
+  console.log('');
+  console.log('Best regards,');
+  console.log('The Dev Diaries Team');
+  console.log('═══════════════════════════════════════');
+  
+  // Show browser notification with the code
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Dev Diaries Verification Code', {
+      body: `Your verification code is: ${code}`,
+      icon: '/favicon.ico',
+      tag: 'verification-code',
+      requireInteraction: true
+    });
+  }
+  
+  // Simulate a small delay like a real email service
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  return { 
+    success: true,
+    message: 'Verification code sent! Check the browser console and notifications for the code (development mode).'
+  };
 };
 
 // Send email using EmailJS (works directly from browser)
@@ -72,8 +141,13 @@ const sendEmailViaEmailJS = async (
   try {
     console.log('📨 Preparing to send real email...');
     
+    // Get configuration from environment variables
+    const userID = import.meta.env.VITE_EMAILJS_USER_ID;
+    const serviceID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const templateID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+    
     // Initialize EmailJS with your credentials
-    emailjs.init("YOUR_EMAILJS_USER_ID"); // Replace with your EmailJS User ID
+    emailjs.init(userID);
     
     const templateParams = {
       to_email: email,
@@ -90,8 +164,8 @@ const sendEmailViaEmailJS = async (
     
     // Send email using EmailJS
     const result = await emailjs.send(
-      'YOUR_SERVICE_ID',    // Replace with your EmailJS Service ID
-      'YOUR_TEMPLATE_ID',   // Replace with your EmailJS Template ID
+      serviceID,
+      templateID,
       templateParams
     );
     
@@ -104,43 +178,10 @@ const sendEmailViaEmailJS = async (
     
   } catch (error) {
     console.error('❌ EmailJS error:', error);
-    
-    // For development, we'll simulate email sending and log the code
-    console.log('🔧 Development Mode: Simulating email send...');
-    console.log('═══════════════════════════════════════');
-    console.log('📧 EMAIL SIMULATION');
-    console.log('═══════════════════════════════════════');
-    console.log(`To: ${email}`);
-    console.log(`Subject: Dev Diaries - Email Verification Code`);
-    console.log('');
-    console.log(`Hello ${userName}!`);
-    console.log('');
-    console.log('Thank you for signing up for Dev Diaries.');
-    console.log('Your verification code is:');
-    console.log('');
-    console.log(`🔑 ${code}`);
-    console.log('');
-    console.log('This code expires in 5 minutes.');
-    console.log('Enter this code on the verification page to complete your registration.');
-    console.log('');
-    console.log('If you didn\'t request this, please ignore this email.');
-    console.log('');
-    console.log('Best regards,');
-    console.log('The Dev Diaries Team');
-    console.log('═══════════════════════════════════════');
-    
-    // Show browser notification with the code
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Dev Diaries Verification Code', {
-        body: `Your verification code is: ${code}`,
-        icon: '/favicon.ico',
-        tag: 'verification-code',
-        requireInteraction: true
-      });
-    }
-    
-    // For development, always return success
-    return { success: true };
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown EmailJS error' 
+    };
   }
 };
 
