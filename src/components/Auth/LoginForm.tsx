@@ -29,21 +29,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
     const type = urlParams.get('type');
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
     
     // Check if this is an email confirmation redirect
-    if (accessToken && type === 'signup') {
+    if (type === 'signup' && accessToken && refreshToken && !error) {
       setShowVerificationSuccess(true);
       
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Clear URL parameters to clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
       
-      // Hide success message after 3 seconds
+      // Hide success message after 3 seconds with fade out
       const timer = setTimeout(() => {
         setShowVerificationSuccess(false);
       }, 3000);
       
       return () => clearTimeout(timer);
+    } else if (error) {
+      // Handle verification errors
+      if (errorDescription?.includes('expired') || errorDescription?.includes('invalid')) {
+        setError('The verification link has expired or is invalid. Please try registering again.');
+      }
+      
+      // Clear error parameters from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
 
@@ -68,17 +81,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       <div className="max-w-md w-full space-y-8">
         {/* Email Verification Success Message */}
         {showVerificationSuccess && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-500">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-xl backdrop-blur-sm max-w-sm">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
                   <CheckCircle className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-green-800">
-                    Account successfully activated
+                  <p className="text-sm font-semibold text-green-800">
+                    Your account has been successfully activated
                   </p>
-                  <p className="text-xs text-green-600">
+                  <p className="text-xs text-green-600 mt-1">
                     You can now sign in to your account
                   </p>
                 </div>

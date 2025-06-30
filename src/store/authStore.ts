@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
+        if (event === 'SIGNED_IN' && session?.user) {
           const user: User = {
             id: session.user.id,
             email: session.user.email || '',
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true, 
             loading: false 
           });
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           set({ 
             user: null, 
             isAuthenticated: false, 
@@ -112,8 +112,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Get the current origin for redirect URL
-      const redirectUrl = `${window.location.origin}/`;
+      // Get the current origin for redirect URL - use the actual app URL
+      const redirectUrl = window.location.origin;
 
       const { data, error } = await supabase.auth.signUp({
         email,
