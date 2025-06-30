@@ -18,3 +18,9 @@ export const CARD_TYPE_LABELS = {
   [CARD_TYPES.LINK]: 'Link',
   [CARD_TYPES.FILE]: 'File'
 } as const;
+
+export const APP_CONFIG = {
+  name: 'Dev Diaries',
+  description: 'Your personal knowledge management system',
+  version: '1.0.0'
+} as const;
