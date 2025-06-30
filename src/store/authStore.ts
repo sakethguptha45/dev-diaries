@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { AuthState, User, VerificationState } from '../types';
 import { supabase } from '../lib/supabase';
-import { sendVerificationEmail, generateVerificationCode } from '../services/emailService';
 
 const initialVerificationState: VerificationState = {
   isVerifying: false,
@@ -15,34 +14,6 @@ const initialVerificationState: VerificationState = {
   lockUntil: null,
   lastCodeSent: null,
   errors: [],
-};
-
-// Secure verification session storage
-interface VerificationSession {
-  email: string;
-  hashedCode: string;
-  expiresAt: Date;
-  attempts: number;
-  createdAt: Date;
-  isLocked: boolean;
-  lockUntil: Date | null;
-  userData: {
-    name: string;
-    password: string;
-  };
-}
-
-const verificationSessions = new Map<string, VerificationSession>();
-
-// Simple hash function for secure code storage
-const hashCode = (code: string): string => {
-  let hash = 0;
-  for (let i = 0; i < code.length; i++) {
-    const char = code.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return hash.toString();
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -148,7 +119,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
-      console.log('🔄 Starting OTP registration process...');
+      console.log('🔄 Starting Supabase OTP registration process...');
       
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -167,52 +138,83 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('📝 Starting OTP verification process (NOT creating Supabase account yet)...');
+      console.log('📧 Using Supabase built-in OTP system...');
 
-      // Store user data temporarily for verification
-      const userData = {
-        name,
-        password,
-      };
-
-      // Generate verification code
-      const code = generateVerificationCode();
-      const hashedCode = hashCode(code);
-      
-      console.log('🔑 Generated verification code:', code);
-      
-      // Create verification session
-      const session: VerificationSession = {
+      // Use Supabase's built-in OTP system
+      const { data, error } = await supabase.auth.signUp({
         email,
-        hashedCode,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-        attempts: 0,
-        createdAt: new Date(),
-        isLocked: false,
-        lockUntil: null,
-        userData
-      };
-      
-      verificationSessions.set(email, session);
-      console.log('💾 Verification session created');
-      
-      // Send verification email
-      console.log('📤 Sending verification email...');
-      const emailResult = await sendVerificationEmail(email, code, name);
-      
-      if (!emailResult.success) {
-        console.error('❌ Email sending failed:', emailResult.message);
-        verificationSessions.delete(email);
-        return { 
-          success: false, 
-          errorMessage: emailResult.message || 'Failed to send verification email' 
-        };
+        password,
+        options: {
+          data: {
+            name: name,
+          },
+          // This will trigger Supabase to send an OTP instead of a confirmation link
+          emailRedirectTo: undefined,
+        },
+      });
+
+      if (error) {
+        console.error('❌ Supabase registration error:', error);
+        
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          return { 
+            success: false, 
+            errorMessage: 'An account with this email already exists. Please sign in instead.' 
+          };
+        }
+        
+        if (error.message.includes('Failed to fetch')) {
+          return { 
+            success: false, 
+            errorMessage: 'Unable to connect to the server. Please check your internet connection.' 
+          };
+        }
+        
+        return { success: false, errorMessage: error.message };
       }
-      
-      console.log('✅ Verification email sent successfully');
-      
-      // Always require verification for OTP system
-      return { success: true, needsVerification: true };
+
+      if (data.user) {
+        console.log('✅ User created, email confirmation required');
+        
+        // Set up verification state
+        set(state => ({
+          verification: {
+            ...state.verification,
+            isVerifying: true,
+            email: email,
+            timeRemaining: 300, // 5 minutes
+            canResend: false,
+            lastCodeSent: new Date(),
+          }
+        }));
+
+        // Start countdown timer
+        const startTimer = () => {
+          const updateTimer = () => {
+            const currentState = get();
+            const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
+            
+            set(state => ({
+              verification: {
+                ...state.verification,
+                timeRemaining,
+                canResend: timeRemaining === 0,
+              }
+            }));
+
+            if (timeRemaining > 0) {
+              setTimeout(updateTimer, 1000);
+            }
+          };
+          updateTimer();
+        };
+
+        startTimer();
+        
+        return { success: true, needsVerification: true };
+      }
+
+      return { success: false, errorMessage: 'Registration failed. Please try again.' };
       
     } catch (error) {
       console.error('❌ Registration error:', error);
@@ -236,9 +238,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         verification: initialVerificationState
       });
-      
-      // Clear any verification sessions
-      verificationSessions.clear();
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -246,77 +245,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   sendVerificationCode: async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      console.log('📧 Sending verification code to:', email);
+      console.log('📧 Sending OTP via Supabase to:', email);
       
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return { success: false, message: 'Invalid email address format.' };
-      }
+      // Use Supabase's resend functionality
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
 
-      // Check if user is locked
-      const existingSession = verificationSessions.get(email);
-      if (existingSession?.isLocked && existingSession.lockUntil && new Date() < existingSession.lockUntil) {
-        const remainingTime = Math.ceil((existingSession.lockUntil.getTime() - Date.now()) / 1000 / 60);
+      if (error) {
+        console.error('❌ Failed to send OTP:', error);
         return { 
           success: false, 
-          message: `Account temporarily locked. Try again in ${remainingTime} minutes.` 
+          message: error.message || 'Failed to send verification code' 
         };
       }
 
-      // Generate secure verification code
-      const code = generateVerificationCode();
-      const hashedCode = hashCode(code);
+      console.log('✅ OTP sent successfully via Supabase');
       
-      console.log('🔑 Generated verification code:', code);
-      
-      // Update existing session or create new one
-      if (existingSession) {
-        existingSession.hashedCode = hashedCode;
-        existingSession.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-        existingSession.attempts = 0;
-        existingSession.isLocked = false;
-        existingSession.lockUntil = null;
-      } else {
-        return { success: false, message: 'No registration session found. Please start registration again.' };
-      }
-      
-      console.log('💾 Verification session updated');
-      
-      // Send email with verification code
-      console.log('📤 Sending email...');
-      const emailResult = await sendVerificationEmail(email, code, existingSession.userData.name);
-      
-      if (!emailResult.success) {
-        console.error('❌ Email sending failed:', emailResult.message);
-        return emailResult;
-      }
-      
-      console.log('✅ Email sent successfully');
-      
+      // Update verification state
+      set(state => ({
+        verification: {
+          ...state.verification,
+          isVerifying: true,
+          email,
+          timeRemaining: 300, // 5 minutes
+          attempts: 0,
+          canResend: false,
+          isLocked: false,
+          lockUntil: null,
+          lastCodeSent: new Date(),
+        }
+      }));
+
       // Start countdown timer
       const startTimer = () => {
         const updateTimer = () => {
-          const session = verificationSessions.get(email);
-          if (!session) return;
-          
-          const timeRemaining = Math.max(0, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+          const currentState = get();
+          const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
           
           set(state => ({
             verification: {
               ...state.verification,
-              isVerifying: true,
-              email,
               timeRemaining,
-              attempts: session.attempts,
               canResend: timeRemaining === 0,
-              isLocked: session.isLocked,
-              lockUntil: session.lockUntil,
-              lastCodeSent: new Date(),
             }
           }));
 
-          if (timeRemaining > 0 && !session.isLocked) {
+          if (timeRemaining > 0) {
             setTimeout(updateTimer, 1000);
           }
         };
@@ -342,154 +318,62 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔍 Verifying code:', code);
+      console.log('🔍 Verifying OTP code via Supabase:', code);
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found. Please request a new code.' };
       }
 
-      const session = verificationSessions.get(verification.email);
-      if (!session) {
-        return { success: false, message: 'No verification session found. Please request a new code.' };
-      }
-
-      // Check if locked
-      if (session.isLocked && session.lockUntil && new Date() < session.lockUntil) {
-        const remainingTime = Math.ceil((session.lockUntil.getTime() - Date.now()) / 1000 / 60);
-        return { 
-          success: false, 
-          message: `Account temporarily locked. Try again in ${remainingTime} minutes.` 
-        };
-      }
-
-      // Check if expired
-      if (new Date() > session.expiresAt) {
-        console.log('⏰ Code expired');
-        set(state => ({
-          verification: {
-            ...state.verification,
-            timeRemaining: 0,
-            canResend: true
-          }
-        }));
-        return { success: false, message: 'Verification code has expired. Please request a new code.' };
-      }
-
       // Check attempts limit
-      if (session.attempts >= 3) {
+      if (verification.attempts >= 3) {
         console.log('🚫 Too many attempts, locking account');
-        // Lock account for 15 minutes
-        session.isLocked = true;
-        session.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
         
         set(state => ({
           verification: {
             ...state.verification,
             isLocked: true,
-            lockUntil: session.lockUntil
+            lockUntil: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
           }
         }));
         
         return { 
           success: false, 
-          message: 'Too many failed attempts. Account locked for 15 minutes.' 
+          message: 'Too many failed attempts. Please wait 15 minutes before trying again.' 
         };
       }
 
-      // Verify code using secure comparison
-      const inputHashedCode = hashCode(code);
-      const isValidCode = inputHashedCode === session.hashedCode;
-      
-      console.log('🔐 Code validation:', isValidCode ? 'SUCCESS' : 'FAILED');
-      
-      if (isValidCode) {
-        // Success - now create the actual Supabase account
-        console.log('✅ Code verified! Creating Supabase account...');
-        
-        try {
-          // Create the account in Supabase with email confirmation DISABLED
-          const { data, error } = await supabase.auth.signUp({
-            email: verification.email,
-            password: session.userData.password,
-            options: {
-              data: {
-                name: session.userData.name,
-                email_verified: true, // Mark as verified since we verified via OTP
-              },
-              // CRITICAL: Disable Supabase's email confirmation completely
-              emailRedirectTo: undefined,
-            },
-          });
+      // Verify the OTP using Supabase
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: verification.email,
+        token: code,
+        type: 'signup'
+      });
 
-          if (error) {
-            console.error('❌ Supabase account creation failed:', error);
-            
-            if (error.message.includes('already registered')) {
-              return { 
-                success: false, 
-                message: 'An account with this email already exists. Please sign in instead.' 
-              };
-            }
-            
-            return { 
-              success: false, 
-              message: 'Failed to create account. Please try again.' 
-            };
-          }
-
-          if (data.user) {
-            console.log('✅ Supabase account created successfully');
-            
-            // Clean up verification session
-            verificationSessions.delete(verification.email);
-            set({ verification: initialVerificationState });
-            
-            return { success: true, message: 'Email verified and account created successfully!' };
-          } else {
-            return { 
-              success: false, 
-              message: 'Failed to create account. Please try again.' 
-            };
-          }
-          
-        } catch (supabaseError) {
-          console.error('❌ Supabase error:', supabaseError);
-          return { 
-            success: false, 
-            message: 'Failed to create account. Please try again.' 
-          };
-        }
+      if (error) {
+        console.error('❌ OTP verification failed:', error);
         
-      } else {
-        // Failed attempt
-        session.attempts++;
-        const attemptsRemaining = 3 - session.attempts;
-        
-        console.log(`❌ Invalid code. Attempts remaining: ${attemptsRemaining}`);
-        
+        // Increment attempts
         set(state => ({
           verification: {
             ...state.verification,
-            attempts: session.attempts,
+            attempts: state.verification.attempts + 1,
           }
         }));
         
+        const attemptsRemaining = 3 - (verification.attempts + 1);
+        
         if (attemptsRemaining <= 0) {
-          // Lock account
-          session.isLocked = true;
-          session.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-          
           set(state => ({
             verification: {
               ...state.verification,
               isLocked: true,
-              lockUntil: session.lockUntil
+              lockUntil: new Date(Date.now() + 15 * 60 * 1000),
             }
           }));
           
           return { 
             success: false, 
-            message: 'Too many failed attempts. Account locked for 15 minutes.' 
+            message: 'Too many failed attempts. Please wait 15 minutes before trying again.' 
           };
         }
         
@@ -498,6 +382,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           message: `Invalid verification code. ${attemptsRemaining} ${attemptsRemaining === 1 ? 'attempt' : 'attempts'} remaining.`
         };
       }
+
+      if (data.user && data.session) {
+        console.log('✅ OTP verified successfully! User is now authenticated.');
+        
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || data.user.email || '',
+          isEmailVerified: true,
+          createdAt: new Date(data.user.created_at)
+        };
+        
+        // Clear verification state and set user as authenticated
+        set({ 
+          user, 
+          isAuthenticated: true,
+          verification: initialVerificationState 
+        });
+        
+        return { success: true, message: 'Email verified successfully! Welcome to Dev Diaries!' };
+      }
+
+      return { 
+        success: false, 
+        message: 'Verification failed. Please try again.' 
+      };
+      
     } catch (error) {
       console.error('Error verifying code:', error);
       return { 
@@ -511,66 +422,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔄 Resending verification code');
+      console.log('🔄 Resending OTP via Supabase');
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found.' };
       }
 
       // Check if user is locked
-      const existingSession = verificationSessions.get(verification.email);
-      if (existingSession?.isLocked && existingSession.lockUntil && new Date() < existingSession.lockUntil) {
-        const remainingTime = Math.ceil((existingSession.lockUntil.getTime() - Date.now()) / 1000 / 60);
+      if (verification.isLocked && verification.lockUntil && new Date() < verification.lockUntil) {
+        const remainingTime = Math.ceil((verification.lockUntil.getTime() - Date.now()) / 1000 / 60);
         return { 
           success: false, 
-          message: `Account temporarily locked. Try again in ${remainingTime} minutes.` 
+          message: `Please wait ${remainingTime} minutes before requesting a new code.` 
         };
       }
 
-      if (!existingSession) {
-        return { success: false, message: 'No verification session found.' };
-      }
+      // Use Supabase's resend functionality
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: verification.email,
+      });
 
-      // Generate new code
-      const code = generateVerificationCode();
-      const hashedCode = hashCode(code);
-      
-      console.log('🔑 Generated new verification code:', code);
-      
-      // Update session
-      existingSession.hashedCode = hashedCode;
-      existingSession.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-      existingSession.attempts = 0;
-      existingSession.isLocked = false;
-      existingSession.lockUntil = null;
-      
-      // Send new email
-      const emailResult = await sendVerificationEmail(verification.email, code, existingSession.userData.name);
-      
-      if (!emailResult.success) {
-        console.error('❌ Failed to resend email:', emailResult.message);
-        return emailResult;
+      if (error) {
+        console.error('❌ Failed to resend OTP:', error);
+        return { 
+          success: false, 
+          message: error.message || 'Failed to resend verification code' 
+        };
       }
       
-      console.log('✅ New verification code sent');
+      console.log('✅ New OTP sent successfully');
       
+      // Reset verification state
+      set(state => ({
+        verification: {
+          ...state.verification,
+          timeRemaining: 300, // 5 minutes
+          attempts: 0,
+          canResend: false,
+          isLocked: false,
+          lockUntil: null,
+          lastCodeSent: new Date(),
+        }
+      }));
+
       // Restart timer
       const startTimer = () => {
         const updateTimer = () => {
-          const session = verificationSessions.get(verification.email);
-          if (!session) return;
-          
-          const timeRemaining = Math.max(0, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+          const currentState = get();
+          const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
           
           set(state => ({
             verification: {
               ...state.verification,
               timeRemaining,
-              attempts: session.attempts,
               canResend: timeRemaining === 0,
-              isLocked: false,
-              lockUntil: null,
-              lastCodeSent: new Date(),
             }
           }));
 
@@ -594,10 +500,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetVerification: () => {
-    const { verification } = get();
-    if (verification.email) {
-      verificationSessions.delete(verification.email);
-    }
     set({ verification: initialVerificationState });
   },
 }));

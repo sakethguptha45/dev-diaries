@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { VerificationForm } from './VerificationForm';
-import { requestNotificationPermission } from '../../services/emailService';
 
 interface RegisterFormData {
   name: string;
@@ -17,7 +16,7 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
-  const { register: registerUser, sendVerificationCode } = useAuthStore();
+  const { register: registerUser } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,11 +33,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
 
   const password = watch('password');
 
-  // Request notification permission on component mount
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
-
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setError('');
@@ -48,13 +42,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       if (result.success) {
         if (result.needsVerification) {
           setUserEmail(data.email);
-          // Automatically send verification code
-          const codeResult = await sendVerificationCode(data.email);
-          if (codeResult.success) {
-            setShowVerification(true);
-          } else {
-            setError(codeResult.message || 'Failed to send verification code');
-          }
+          setShowVerification(true);
         }
       } else {
         setError(result.errorMessage || 'Registration failed. Please try again.');
@@ -133,13 +121,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-          {/* Development Notice */}
+          {/* Information Notice */}
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="text-sm text-blue-800">
-              <p className="font-medium mb-2">📧 Email Verification System</p>
+              <p className="font-medium mb-2">📧 Email Verification Required</p>
               <p className="text-xs text-blue-700">
-                After registration, you'll receive a 6-digit verification code. 
-                Check the browser console for the code during development.
+                After registration, you'll receive a 6-digit verification code via email. 
+                Please check your inbox (including spam folder) for the code.
               </p>
             </div>
           </div>
