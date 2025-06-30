@@ -30,6 +30,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   const [favoritesCanScrollRight, setFavoritesCanScrollRight] = useState(false);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
+  const [showFavoritesArrows, setShowFavoritesArrows] = useState(false);
+  const [showRecentArrows, setShowRecentArrows] = useState(false);
   
   const favoritesScrollRef = useRef<HTMLDivElement>(null);
   const recentScrollRef = useRef<HTMLDivElement>(null);
@@ -384,26 +386,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 </div>
                 
                 {/* Netflix-style carousel container */}
-                <div className="relative group">
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setShowFavoritesArrows(true)}
+                  onMouseLeave={() => setShowFavoritesArrows(false)}
+                >
                   {/* Left arrow */}
-                  {favoritesCanScrollLeft && (
+                  {favoritesCanScrollLeft && showFavoritesArrows && (
                     <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('left', favoritesScrollRef)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300"
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </motion.button>
                   )}
                   
                   {/* Right arrow */}
-                  {favoritesCanScrollRight && (
+                  {favoritesCanScrollRight && showFavoritesArrows && (
                     <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('right', favoritesScrollRef)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300"
                     >
                       <ChevronRight className="h-6 w-6" />
                     </motion.button>
@@ -449,26 +461,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 </div>
                 
                 {/* Netflix-style carousel container */}
-                <div className="relative group">
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setShowRecentArrows(true)}
+                  onMouseLeave={() => setShowRecentArrows(false)}
+                >
                   {/* Left arrow */}
-                  {recentCanScrollLeft && (
+                  {recentCanScrollLeft && showRecentArrows && (
                     <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('left', recentScrollRef)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300"
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </motion.button>
                   )}
                   
                   {/* Right arrow */}
-                  {recentCanScrollRight && (
+                  {recentCanScrollRight && showRecentArrows && (
                     <motion.button
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('right', recentScrollRef)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300"
                     >
                       <ChevronRight className="h-6 w-6" />
                     </motion.button>
