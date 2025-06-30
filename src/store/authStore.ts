@@ -26,6 +26,10 @@ interface VerificationSession {
   createdAt: Date;
   isLocked: boolean;
   lockUntil: Date | null;
+  userData: {
+    name: string;
+    password: string;
+  };
 }
 
 const verificationSessions = new Map<string, VerificationSession>();
@@ -144,7 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
-      console.log('🔄 Starting registration process...');
+      console.log('🔄 Starting OTP registration process...');
       
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -163,56 +167,66 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('📝 Creating account in Supabase (without email confirmation)...');
+      // Check if user already exists
+      console.log('🔍 Checking if user already exists...');
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('auth.users')
+        .select('email')
+        .eq('email', email)
+        .limit(1);
 
-      // Create account in Supabase with email confirmation COMPLETELY DISABLED
-      const { data, error } = await supabase.auth.signUp({
-        email,
+      // If we can't check (which is normal for RLS), we'll proceed and let Supabase handle duplicates
+      if (checkError) {
+        console.log('ℹ️ Cannot check existing users (normal with RLS)');
+      }
+
+      console.log('📝 Starting OTP verification process (NOT creating Supabase account yet)...');
+
+      // Store user data temporarily for verification
+      const userData = {
+        name,
         password,
-        options: {
-          data: {
-            name: name,
-            email_verified: false, // We'll handle verification manually
-          },
-          // CRITICAL: This completely disables Supabase's email confirmation
-          emailRedirectTo: undefined,
-        },
-      });
+      };
 
-      if (error) {
-        console.error('❌ Registration error:', error);
-        
-        if (error.message.includes('Failed to fetch')) {
-          return { 
-            success: false, 
-            errorMessage: 'Unable to connect to the server. Please check your internet connection and try again.' 
-          };
-        }
-        
-        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-          return { 
-            success: false, 
-            errorMessage: 'An account with this email already exists. Please sign in instead.' 
-          };
-        }
-        
-        return { success: false, errorMessage: error.message };
+      // Generate verification code
+      const code = generateVerificationCode();
+      const hashedCode = hashCode(code);
+      
+      console.log('🔑 Generated verification code:', code);
+      
+      // Create verification session
+      const session: VerificationSession = {
+        email,
+        hashedCode,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        attempts: 0,
+        createdAt: new Date(),
+        isLocked: false,
+        lockUntil: null,
+        userData
+      };
+      
+      verificationSessions.set(email, session);
+      console.log('💾 Verification session created');
+      
+      // Send verification email
+      console.log('📤 Sending verification email...');
+      const emailResult = await sendVerificationEmail(email, code, name);
+      
+      if (!emailResult.success) {
+        console.error('❌ Email sending failed:', emailResult.message);
+        verificationSessions.delete(email);
+        return { 
+          success: false, 
+          errorMessage: emailResult.message || 'Failed to send verification email' 
+        };
       }
-
-      if (data.user) {
-        console.log('✅ Account created successfully in Supabase');
-        
-        // IMPORTANT: Sign out the user immediately to prevent auto-login
-        console.log('🔄 Signing out user to require verification...');
-        await supabase.auth.signOut();
-        
-        console.log('✅ User signed out, verification required');
-        
-        // Always require our custom verification
-        return { success: true, needsVerification: true };
-      }
-
-      return { success: false, errorMessage: 'Registration failed. Please try again.' };
+      
+      console.log('✅ Verification email sent successfully');
+      
+      // Always require verification for OTP system
+      return { success: true, needsVerification: true };
+      
     } catch (error) {
       console.error('❌ Registration error:', error);
       
@@ -269,27 +283,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       console.log('🔑 Generated verification code:', code);
       
-      // Create verification session with security measures
-      const session: VerificationSession = {
-        email,
-        hashedCode,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-        attempts: 0,
-        createdAt: new Date(),
-        isLocked: false,
-        lockUntil: null
-      };
+      // Update existing session or create new one
+      if (existingSession) {
+        existingSession.hashedCode = hashedCode;
+        existingSession.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        existingSession.attempts = 0;
+        existingSession.isLocked = false;
+        existingSession.lockUntil = null;
+      } else {
+        return { success: false, message: 'No registration session found. Please start registration again.' };
+      }
       
-      verificationSessions.set(email, session);
-      console.log('💾 Verification session created');
+      console.log('💾 Verification session updated');
       
       // Send email with verification code
       console.log('📤 Sending email...');
-      const emailResult = await sendVerificationEmail(email, code);
+      const emailResult = await sendVerificationEmail(email, code, existingSession.userData.name);
       
       if (!emailResult.success) {
         console.error('❌ Email sending failed:', emailResult.message);
-        verificationSessions.delete(email);
         return emailResult;
       }
       
@@ -366,7 +378,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Check if expired
       if (new Date() > session.expiresAt) {
         console.log('⏰ Code expired');
-        verificationSessions.delete(verification.email);
         set(state => ({
           verification: {
             ...state.verification,
@@ -405,26 +416,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('🔐 Code validation:', isValidCode ? 'SUCCESS' : 'FAILED');
       
       if (isValidCode) {
-        // Success - clean up and mark as verified
-        verificationSessions.delete(verification.email);
-        console.log('✅ Email verification successful');
+        // Success - now create the actual Supabase account
+        console.log('✅ Code verified! Creating Supabase account...');
         
-        // Update user verification status in Supabase
         try {
-          console.log('📝 Marking user as verified in Supabase...');
+          // Create the account in Supabase with email confirmation DISABLED
+          const { data, error } = await supabase.auth.signUp({
+            email: verification.email,
+            password: session.userData.password,
+            options: {
+              data: {
+                name: session.userData.name,
+                email_verified: true, // Mark as verified since we verified via OTP
+              },
+              // CRITICAL: Disable Supabase's email confirmation completely
+              emailRedirectTo: undefined,
+            },
+          });
+
+          if (error) {
+            console.error('❌ Supabase account creation failed:', error);
+            
+            if (error.message.includes('already registered')) {
+              return { 
+                success: false, 
+                message: 'An account with this email already exists. Please sign in instead.' 
+              };
+            }
+            
+            return { 
+              success: false, 
+              message: 'Failed to create account. Please try again.' 
+            };
+          }
+
+          if (data.user) {
+            console.log('✅ Supabase account created successfully');
+            
+            // Clean up verification session
+            verificationSessions.delete(verification.email);
+            set({ verification: initialVerificationState });
+            
+            return { success: true, message: 'Email verified and account created successfully!' };
+          } else {
+            return { 
+              success: false, 
+              message: 'Failed to create account. Please try again.' 
+            };
+          }
           
-          // We need to update the user's email_confirmed_at field
-          // This requires admin privileges, so we'll handle it differently
-          
-          // For now, we'll just mark the verification as complete
-          // In production, you'd want to call a backend API to update this
-          
-        } catch (updateError) {
-          console.warn('Could not update user verification status in Supabase:', updateError);
+        } catch (supabaseError) {
+          console.error('❌ Supabase error:', supabaseError);
+          return { 
+            success: false, 
+            message: 'Failed to create account. Please try again.' 
+          };
         }
         
-        set({ verification: initialVerificationState });
-        return { success: true, message: 'Email verified successfully!' };
       } else {
         // Failed attempt
         session.attempts++;
@@ -492,31 +540,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
+      if (!existingSession) {
+        return { success: false, message: 'No verification session found.' };
+      }
+
       // Generate new code
       const code = generateVerificationCode();
       const hashedCode = hashCode(code);
       
       console.log('🔑 Generated new verification code:', code);
       
-      // Create new session
-      const session: VerificationSession = {
-        email: verification.email,
-        hashedCode,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-        attempts: 0,
-        createdAt: new Date(),
-        isLocked: false,
-        lockUntil: null
-      };
-      
-      verificationSessions.set(verification.email, session);
+      // Update session
+      existingSession.hashedCode = hashedCode;
+      existingSession.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      existingSession.attempts = 0;
+      existingSession.isLocked = false;
+      existingSession.lockUntil = null;
       
       // Send new email
-      const emailResult = await sendVerificationEmail(verification.email, code);
+      const emailResult = await sendVerificationEmail(verification.email, code, existingSession.userData.name);
       
       if (!emailResult.success) {
         console.error('❌ Failed to resend email:', emailResult.message);
-        verificationSessions.delete(verification.email);
         return emailResult;
       }
       
