@@ -32,9 +32,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   const [favoritesCanScrollRight, setFavoritesCanScrollRight] = useState(false);
   const [recentCanScrollLeft, setRecentCanScrollLeft] = useState(false);
   const [recentCanScrollRight, setRecentCanScrollRight] = useState(false);
+  const [visibleTagsCount, setVisibleTagsCount] = useState(9);
   
   const favoritesScrollRef = useRef<HTMLDivElement>(null);
   const recentScrollRef = useRef<HTMLDivElement>(null);
+  const tagsContainerRef = useRef<HTMLDivElement>(null);
 
   // Get user-specific cards
   const userCards = useMemo(() => {
@@ -55,6 +57,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   useEffect(() => {
     searchCards(localSearchQuery);
   }, [localSearchQuery, searchCards]);
+
+
+  // Calculate how many tags can fit in one row
+  useEffect(() => {
+    const calculateVisibleTags = () => {
+      if (!tagsContainerRef.current || allTags.length === 0) return;
+
+      const container = tagsContainerRef.current;
+      const containerWidth = container.offsetWidth;
+      
+      // Approximate tag width (including margin) - adjust based on your styling
+      const avgTagWidth = 120; // This includes padding, text, and margin
+      const maxTags = Math.floor(containerWidth / avgTagWidth);
+      
+      // Ensure we show at least 6 tags and at most all available tags
+      const calculatedCount = Math.max(6, Math.min(maxTags, allTags.length));
+      setVisibleTagsCount(calculatedCount);
+    };
+
+    calculateVisibleTags();
+    window.addEventListener('resize', calculateVisibleTags);
+    
+    return () => window.removeEventListener('resize', calculateVisibleTags);
+  }, [allTags.length]);
+
 
   // Update scroll button states
   const updateScrollButtons = () => {
@@ -347,25 +374,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 </div>
               </div>
 
-              {/* Search Results Info */}
-              {(localSearchQuery || selectedTags.length > 0) && (
-                <div className="flex justify-center">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20">
-                    <p className="text-sm text-slate-300">
-                      Found {filteredCards.length} {filteredCards.length === 1 ? 'card' : 'cards'}
-                      {localSearchQuery && ` for "${localSearchQuery}"`}
-                      {selectedTags.length > 0 && ` with tags: ${selectedTags.join(', ')}`}
-                    </p>
-                  </div>
-                </div>
-              )}
 
-              {/* Tags - Limited to 9 tags in single row */}
+              {/* Tags - Dynamic count based on container width */}
               {allTags.length > 0 && (
                 <div className="flex justify-center">
-                  <div className="w-full max-w-6xl">
+                  <div ref={tagsContainerRef} className="w-full max-w-6xl">
                     <div className="flex items-center justify-center space-x-3 overflow-hidden">
-                      {allTags.slice(0, 9).map(tag => (
+                      {allTags.slice(0, visibleTagsCount).map(tag => (
+
                         <motion.button
                           key={tag}
                           whileHover={{ scale: 1.05, y: -2 }}
@@ -380,9 +396,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                           #{tag}
                         </motion.button>
                       ))}
-                      {allTags.length > 9 && (
+
+                      {allTags.length > visibleTagsCount && (
                         <span className="flex-shrink-0 px-3 py-2 bg-white/5 text-slate-400 text-sm rounded-full border border-white/10">
-                          +{allTags.length - 9} more
+                          +{allTags.length - visibleTagsCount} more
+
                         </span>
                       )}
                     </div>
@@ -433,9 +451,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   exit={{ opacity: 0 }}
                   className="space-y-6"
                 >
+
                   <h2 className="text-3xl font-bold text-white px-4">
                     🔍 Search Results
                   </h2>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredCards.map((card, index) => (
                       <motion.div
