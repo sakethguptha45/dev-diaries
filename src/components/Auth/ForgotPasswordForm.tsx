@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { ForgotPasswordVerificationForm } from './ForgotPasswordVerificationForm';
-import { NewPasswordForm } from './NewPasswordForm';
+import { PasswordResetForm } from './PasswordResetForm';
 
 interface ForgotPasswordFormData {
   email: string;
@@ -14,7 +14,7 @@ interface ForgotPasswordFormProps {
   onBack: () => void;
 }
 
-type Step = 'email' | 'verification' | 'newPassword' | 'success';
+type Step = 'email' | 'verification' | 'passwordReset' | 'success';
 
 export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState<Step>('email');
@@ -64,10 +64,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
   };
 
   const handleVerificationSuccess = () => {
-    setCurrentStep('newPassword');
+    setCurrentStep('passwordReset');
   };
 
-  const handlePasswordUpdateSuccess = () => {
+  const handlePasswordResetSuccess = () => {
     setCurrentStep('success');
   };
 
@@ -75,6 +75,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
     setCurrentStep('email');
     setEmail('');
     setError('');
+  };
+
+  const handleBackToVerification = () => {
+    setCurrentStep('verification');
   };
 
   // Verification step
@@ -88,11 +92,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
     );
   }
 
-  // New password step
-  if (currentStep === 'newPassword') {
+  // Password reset step
+  if (currentStep === 'passwordReset') {
     return (
-      <NewPasswordForm
-        onSuccess={handlePasswordUpdateSuccess}
+      <PasswordResetForm
+        onSuccess={handlePasswordResetSuccess}
+        onBack={handleBackToVerification}
       />
     );
   }
@@ -115,8 +120,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
             >
               <CheckCircle className="h-8 w-8 text-white" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Password Updated!</h2>
-            <p className="text-gray-600">Your password has been successfully changed</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Password Reset Complete!</h2>
+            <p className="text-gray-600">Your password has been successfully updated</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
@@ -128,12 +133,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
                 <div className="text-xs text-green-700 space-y-1">
                   <p>✓ Your account is now secure with your new password</p>
                   <p>✓ You can now sign in with your new credentials</p>
-                  <p>✓ Make sure to keep your password safe</p>
+                  <p>✓ Your old password is no longer valid</p>
                 </div>
               </div>
               
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(59, 130, 246, 0.3)" }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onBack}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/25 transition-all duration-300"
