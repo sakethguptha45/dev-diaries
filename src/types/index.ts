@@ -80,14 +80,11 @@ export interface AuthState {
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }>;
   logout: () => void;
   initialize: () => Promise<void>;
-
   sendVerificationCode: (email: string) => Promise<{ success: boolean; message?: string }>;
   verifyCode: (code: string) => Promise<{ success: boolean; message?: string }>;
   resendCode: () => Promise<{ success: boolean; message?: string }>;
   resetVerification: () => void;
-
   deleteAccount: () => Promise<{ success: boolean; errorMessage?: string }>;
-
 }
 
 export interface CardState {

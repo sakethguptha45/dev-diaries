@@ -178,7 +178,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               ...state.verification,
               isVerifying: true,
               email: email,
-              timeRemaining: 300, // 5 minutes
+              timeRemaining: 600, // 10 minutes as requested
               canResend: false,
               lastCodeSent: new Date(),
             }
@@ -188,7 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const startTimer = () => {
             const updateTimer = () => {
               const currentState = get();
-              const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
+              const timeRemaining = Math.max(0, Math.floor((600000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
               
               set(state => ({
                 verification: {
@@ -303,7 +303,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           ...state.verification,
           isVerifying: true,
           email,
-          timeRemaining: 300, // 5 minutes
+          timeRemaining: 600, // 10 minutes as requested
           attempts: 0,
           canResend: false,
           isLocked: false,
@@ -316,7 +316,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const startTimer = () => {
         const updateTimer = () => {
           const currentState = get();
-          const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
+          const timeRemaining = Math.max(0, Math.floor((600000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
           
           set(state => ({
             verification: {
@@ -518,7 +518,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set(state => ({
         verification: {
           ...state.verification,
-          timeRemaining: 300, // 5 minutes
+          timeRemaining: 600, // 10 minutes as requested
           attempts: 0,
           canResend: false,
           isLocked: false,
@@ -531,7 +531,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const startTimer = () => {
         const updateTimer = () => {
           const currentState = get();
-          const timeRemaining = Math.max(0, Math.floor((300000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
+          const timeRemaining = Math.max(0, Math.floor((600000 - (Date.now() - (currentState.verification.lastCodeSent?.getTime() || 0))) / 1000));
           
           set(state => ({
             verification: {
