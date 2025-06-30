@@ -48,9 +48,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   const favoriteCards = getFavoriteCards();
   const allTags = getAllTags();
 
-  // Helper function to ensure dates are Date objects
-  const ensureDate = (date: string | Date): Date => {
-    return typeof date === 'string' ? new Date(date) : date;
+  // Helper function to normalize dates to avoid timezone issues
+  const normalizeDate = (date: string | Date): Date => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    // Create a new date using just the year, month, and day to avoid timezone issues
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   };
 
   // Update search in store when local search changes
@@ -133,8 +135,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   const filteredCards = useMemo(() => {
     let filtered = userCards.map(card => ({
       ...card,
-      createdAt: ensureDate(card.createdAt),
-      updatedAt: ensureDate(card.updatedAt)
+      createdAt: normalizeDate(card.createdAt),
+      updatedAt: normalizeDate(card.updatedAt)
     }));
 
     // Use the current search query (either from props, local state, or global state)
@@ -163,13 +165,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [userCards, searchQuery, localSearchQuery, globalSearchQuery, selectedTags]);
 
-  // Group cards by date for All Cards view - use updatedAt consistently
+  // Group cards by date for All Cards view - use normalized dates
   const groupedCards = useMemo(() => {
     const groups: { [key: string]: Card[] } = {};
     
     filteredCards.forEach(card => {
-      // Use updatedAt for both grouping and display consistency
-      const dateKey = format(ensureDate(card.updatedAt), 'yyyy-MM-dd');
+      // Use the already normalized updatedAt date
+      const dateKey = format(card.updatedAt, 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
