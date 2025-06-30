@@ -347,8 +347,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
             animate={{ opacity: 1, y: 0 }}
             className="relative px-8 pt-8"
           >
-            {/* Background blur effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 via-slate-700/30 to-slate-800/30 backdrop-blur-xl rounded-3xl mx-8"></div>
+            {/* Background blur effect - FIXED SIZE */}
+            <div className="absolute inset-x-8 inset-y-0 bg-gradient-to-r from-slate-800/30 via-slate-700/30 to-slate-800/30 backdrop-blur-xl rounded-3xl"></div>
             
             <div className="relative space-y-6 p-6">
               {/* Centered Search Bar */}
