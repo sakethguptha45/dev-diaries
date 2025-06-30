@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Save, ArrowLeft, Heart, FileHeart as HeartFilled, Tag, Link as LinkIcon, Upload, Trash2, Plus, X, ExternalLink } from 'lucide-react';
@@ -12,6 +12,7 @@ export const EditorPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { cards, addCard, updateCard, deleteCard, toggleFavorite } = useCardStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(!id);
   const [title, setTitle] = useState('');
@@ -22,6 +23,7 @@ export const EditorPage: React.FC = () => {
   const [newLink, setNewLink] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const currentCard = id ? cards.find(card => card.id === id) : null;
 
@@ -123,6 +125,22 @@ export const EditorPage: React.FC = () => {
     setLinks(links.filter(link => link !== linkToRemove));
   };
 
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      setSelectedFiles(prev => [...prev, ...fileArray]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleBack = () => {
     if (hasUnsavedChanges) {
       if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
@@ -154,7 +172,7 @@ export const EditorPage: React.FC = () => {
               </motion.button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  {currentCard ? (isEditing ? 'Edit Card' : 'View Card') : 'New Card'}
+                  {currentCard ? (isEditing ? 'Edit Card' : 'View Card') : (title.trim() || 'New Card')}
                 </h1>
                 {hasUnsavedChanges && (
                   <p className="text-sm text-orange-600">Unsaved changes</p>
@@ -394,14 +412,53 @@ export const EditorPage: React.FC = () => {
               </div>
 
               {isEditing ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors duration-200">
-                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    Drag files here or click to upload
-                  </p>
-                  <button className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                    Choose Files
-                  </button>
+                <div className="space-y-4">
+                  <div 
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors duration-200 cursor-pointer"
+                    onClick={handleFileSelect}
+                  >
+                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">
+                      Drag files here or click to upload
+                    </p>
+                    <button 
+                      type="button"
+                      className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Choose Files
+                    </button>
+                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="*/*"
+                  />
+
+                  {/* Selected files list */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-gray-700">Selected Files:</h4>
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-emerald-700 truncate">{file.name}</p>
+                            <p className="text-xs text-emerald-600">{(file.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                          <button
+                            onClick={() => removeFile(index)}
+                            className="text-emerald-400 hover:text-red-500 transition-colors duration-200 ml-2"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 text-center py-4">

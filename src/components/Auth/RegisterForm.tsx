@@ -40,8 +40,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         if (result.needsVerification) {
           setSuccess(true);
         }
+        // If no verification needed, user will be automatically logged in
       } else {
-        setError('Email already exists');
+        setError(result.errorMessage || 'Registration failed. Please try again.');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -59,14 +60,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-gray-600">We've sent a verification code to your email address</p>
+            <p className="text-gray-600">We've sent a verification link to your email address</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
             <div className="text-center">
               <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                 <p className="text-sm text-green-800">
-                  Please check your email and enter the verification code to complete your registration.
+                  Please check your email and click the verification link to complete your registration.
                 </p>
               </div>
               

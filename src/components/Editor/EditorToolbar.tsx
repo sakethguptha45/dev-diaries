@@ -250,7 +250,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
           <button
             onClick={() => editor.chain().focus().toggleCode().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
-              editor.isActive('code') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
+              editor.isActive('code') ? 'bg-gray-800 text-white' : 'text-gray-600'
             }`}
             title="Inline Code"
           >
@@ -259,7 +259,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
           <button
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             className={`p-2 rounded-lg transition-all duration-200 hover:bg-white hover:shadow-sm ${
-              editor.isActive('codeBlock') ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
+              editor.isActive('codeBlock') ? 'bg-gray-800 text-white' : 'text-gray-600'
             }`}
             title="Code Block"
           >
