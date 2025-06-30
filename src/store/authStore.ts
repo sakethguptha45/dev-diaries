@@ -142,9 +142,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('📧 Attempting Supabase signup with email confirmation...');
+      console.log('📧 Attempting Supabase signup with OTP verification...');
 
-      // First, try the standard signup with email confirmation
+      // CRITICAL: Register user WITHOUT emailRedirectTo to force OTP instead of magic link
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -152,7 +152,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: {
             name: name,
           },
-          // Don't set emailRedirectTo to trigger OTP instead of magic link
+          // DO NOT SET emailRedirectTo - this forces Supabase to send OTP instead of magic link
         },
       });
 
@@ -184,11 +184,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           needsConfirmation: !data.session
         });
         
-        // Check if user needs email confirmation
+        // Check if user needs email confirmation (should be true for OTP flow)
         if (!data.session) {
-          console.log('📧 Email confirmation required, setting up verification state...');
+          console.log('📧 Email confirmation required, setting up OTP verification state...');
           
-          // Set up verification state
+          // Set up verification state for OTP
           set(state => ({
             verification: {
               ...state.verification,
@@ -275,16 +275,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   sendVerificationCode: async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      console.log('📧 Sending verification code to:', email);
+      console.log('📧 Sending OTP verification code to:', email);
       
-      // Use Supabase's resend functionality for signup confirmation
+      // Use Supabase's resend functionality for signup confirmation with OTP
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
+        // DO NOT include options.emailRedirectTo to ensure OTP is sent
       });
 
       if (error) {
-        console.error('❌ Failed to send verification code:', error);
+        console.error('❌ Failed to send OTP verification code:', error);
         
         // Provide more specific error messages
         if (error.message.includes('rate limit')) {
@@ -307,7 +308,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      console.log('✅ Verification code sent successfully');
+      console.log('✅ OTP verification code sent successfully');
       
       // Update verification state
       set(state => ({
@@ -349,10 +350,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       return { 
         success: true, 
-        message: 'Verification code sent! Please check your email inbox (and spam folder).' 
+        message: 'OTP verification code sent! Please check your email inbox (and spam folder).' 
       };
     } catch (error) {
-      console.error('Error sending verification code:', error);
+      console.error('Error sending OTP verification code:', error);
       return { 
         success: false, 
         message: 'Network error. Please check your connection and try again.' 
@@ -364,7 +365,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔍 Verifying code:', code, 'for email:', verification.email);
+      console.log('🔍 Verifying OTP code:', code, 'for email:', verification.email);
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found. Please request a new code.' };
@@ -388,11 +389,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Verify the OTP using Supabase
+      // Verify the OTP using Supabase with type 'signup'
       const { data, error } = await supabase.auth.verifyOtp({
         email: verification.email,
         token: code,
-        type: 'signup'
+        type: 'signup' // This is crucial for signup verification
       });
 
       if (error) {
@@ -471,7 +472,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
       
     } catch (error) {
-      console.error('Error verifying code:', error);
+      console.error('Error verifying OTP code:', error);
       return { 
         success: false, 
         message: 'Network error. Please check your connection and try again.' 
@@ -483,7 +484,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { verification } = get();
     
     try {
-      console.log('🔄 Resending verification code to:', verification.email);
+      console.log('🔄 Resending OTP verification code to:', verification.email);
       
       if (!verification.email) {
         return { success: false, message: 'No verification session found.' };
@@ -498,14 +499,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Use Supabase's resend functionality
+      // Use Supabase's resend functionality for OTP
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: verification.email,
+        // DO NOT include options.emailRedirectTo to ensure OTP is sent
       });
 
       if (error) {
-        console.error('❌ Failed to resend verification code:', error);
+        console.error('❌ Failed to resend OTP verification code:', error);
         
         if (error.message.includes('rate limit')) {
           return { 
@@ -520,7 +522,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
       
-      console.log('✅ New verification code sent successfully');
+      console.log('✅ New OTP verification code sent successfully');
       
       // Reset verification state
       set(state => ({
@@ -558,9 +560,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       startTimer();
       
-      return { success: true, message: 'New verification code sent! Please check your email.' };
+      return { success: true, message: 'New OTP verification code sent! Please check your email.' };
     } catch (error) {
-      console.error('Error resending code:', error);
+      console.error('Error resending OTP code:', error);
       return { 
         success: false, 
         message: 'Network error. Please check your connection and try again.' 

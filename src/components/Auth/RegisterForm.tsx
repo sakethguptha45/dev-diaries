@@ -121,14 +121,32 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-          {/* Information Notice */}
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-2">📧 Email Verification Required</p>
-              <p className="text-xs text-blue-700">
-                After registration, you'll receive a 6-digit verification code via email. 
-                Please check your inbox (including spam folder) for the code.
-              </p>
+          {/* Enhanced Information Notice */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            <div className="text-sm">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">📧</span>
+                </div>
+                <p className="font-semibold text-blue-900">Email Verification with OTP Code</p>
+              </div>
+              <div className="text-blue-800 space-y-2 text-xs">
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>✓ You will receive a 6-digit verification code</strong> (not a link!)
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>✓ Check your email inbox AND spam folder</strong>
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>✓ Look for email from Supabase</strong> with subject containing "verification"
+                </div>
+                <div className="bg-blue-100 p-2 rounded">
+                  <strong>✓ Code expires in 5 minutes</strong> - you can request a new one if needed
+                </div>
+              </div>
+              <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs text-yellow-800">
+                <strong>💡 Pro tip:</strong> Gmail users should check the "Promotions" tab. Corporate emails may block automated messages.
+              </div>
             </div>
           </div>
 
@@ -185,6 +203,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                💡 Use Gmail for best delivery rates. Avoid corporate emails if possible.
+              </p>
             </div>
 
             <div>
@@ -249,7 +270,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
               disabled={loading}
               className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Creating account...</span>
+                </div>
+              ) : (
+                'Create account'
+              )}
             </button>
           </form>
 
