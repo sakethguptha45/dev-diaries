@@ -70,10 +70,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
                   <strong>Please check your email and click the verification link to activate your account.</strong>
                 </p>
                 <p className="text-xs text-green-700">
-                  After clicking the link, you will be redirected back to the login page where you can sign in to your new account.
+                  After clicking the link, you will be redirected to a verification success page, and then you can sign in to your new account.
                 </p>
                 <p className="text-xs text-green-600 mt-2">
-                  <strong>Note:</strong> The verification link will redirect you to this application and show a success message.
+                  <strong>Note:</strong> The verification link will redirect you to a dedicated verification page.
                 </p>
               </div>
               

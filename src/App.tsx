@@ -5,6 +5,7 @@ import { useCardStore } from './store/cardStore';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EditorPage } from './pages/EditorPage';
+import { EmailVerificationPage } from './pages/EmailVerificationPage';
 
 function App() {
   const { isAuthenticated, loading, user, initialize } = useAuthStore();
@@ -31,17 +32,26 @@ function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthPage />;
-  }
-
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/editor" element={<EditorPage />} />
-        <Route path="/editor/:id" element={<EditorPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Email verification route - accessible without authentication */}
+        <Route path="/verify-email" element={<EmailVerificationPage />} />
+        
+        {/* Protected routes */}
+        {isAuthenticated ? (
+          <>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/editor" element={<EditorPage />} />
+            <Route path="/editor/:id" element={<EditorPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/" element={<AuthPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        )}
       </Routes>
     </Router>
   );

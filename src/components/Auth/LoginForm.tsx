@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Mail, Lock, BookOpen, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface LoginFormData {
@@ -17,81 +17,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showVerificationSuccess, setShowVerificationSuccess] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<LoginFormData>();
-
-  // Check for email verification success on component mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hash = window.location.hash;
-    
-    // Check URL parameters first
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    const type = urlParams.get('type');
-    const error = urlParams.get('error');
-    const errorDescription = urlParams.get('error_description');
-    
-    // Also check hash parameters (Supabase uses hash for auth tokens)
-    const hashParams = new URLSearchParams(hash.substring(1));
-    const hashAccessToken = hashParams.get('access_token');
-    const hashRefreshToken = hashParams.get('refresh_token');
-    const hashType = hashParams.get('type');
-    const hashError = hashParams.get('error');
-    const hashErrorDescription = hashParams.get('error_description');
-    
-    // Use either URL params or hash params
-    const finalAccessToken = accessToken || hashAccessToken;
-    const finalRefreshToken = refreshToken || hashRefreshToken;
-    const finalType = type || hashType;
-    const finalError = error || hashError;
-    const finalErrorDescription = errorDescription || hashErrorDescription;
-    
-    console.log('URL check:', {
-      finalAccessToken: finalAccessToken ? 'present' : 'missing',
-      finalRefreshToken: finalRefreshToken ? 'present' : 'missing',
-      finalType,
-      finalError,
-      finalErrorDescription,
-      currentURL: window.location.href
-    });
-    
-    // Check if this is an email confirmation redirect
-    if (finalType === 'signup' && finalAccessToken && finalRefreshToken && !finalError) {
-      console.log('Email verification successful, showing success message and cleaning URL');
-      
-      // Immediately clean the URL to remove all auth tokens
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-      
-      // Show success message
-      setShowVerificationSuccess(true);
-      
-      // Hide success message after 3 seconds
-      const timer = setTimeout(() => {
-        setShowVerificationSuccess(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    } else if (finalError) {
-      // Handle verification errors
-      console.log('Email verification error:', finalError, finalErrorDescription);
-      if (finalErrorDescription?.includes('expired') || finalErrorDescription?.includes('invalid') || finalError === 'access_denied') {
-        setError('The verification link has expired or is invalid. Please try registering again.');
-      } else {
-        setError('There was an issue with email verification. Please try again.');
-      }
-      
-      // Clear error parameters from URL and hash
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
@@ -112,27 +43,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
       <div className="max-w-md w-full space-y-8">
-        {/* Email Verification Success Message */}
-        {showVerificationSuccess && (
-          <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-500">
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 shadow-xl backdrop-blur-sm max-w-sm">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-green-800">
-                    Your account has been successfully activated
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    You can now sign in to your account
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <BookOpen className="h-8 w-8 text-white" />

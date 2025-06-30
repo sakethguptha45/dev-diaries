@@ -112,13 +112,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
       }
 
-      // Use the correct Vite dev server URL for development
+      // Use the correct redirect URL for email verification
       const isDevelopment = import.meta.env.DEV;
       const redirectUrl = isDevelopment 
-        ? 'http://localhost:5173' 
-        : window.location.origin;
+        ? 'http://localhost:5173/verify-email' 
+        : `${window.location.origin}/verify-email`;
 
-      console.log('Using redirect URL:', redirectUrl);
+      console.log('Using redirect URL for email verification:', redirectUrl);
 
       const { data, error } = await supabase.auth.signUp({
         email,
