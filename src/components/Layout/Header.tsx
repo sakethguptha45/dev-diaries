@@ -49,11 +49,11 @@ export const Header: React.FC = () => {
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-xl border-b border-slate-700/50 shadow-2xl"
+        className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-xl border-b border-slate-700/50 shadow-2xl"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
+            {/* Logo - Left Corner */}
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-3 group">
                 <motion.div
@@ -69,8 +69,8 @@ export const Header: React.FC = () => {
               </Link>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
+            {/* Actions - Right Corner */}
+            <div className="flex items-center space-x-4 ml-auto">
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(59, 130, 246, 0.3)" }}
                 whileTap={{ scale: 0.95 }}
@@ -81,7 +81,7 @@ export const Header: React.FC = () => {
                 New Card
               </motion.button>
 
-              {/* User Menu */}
+              {/* User Menu - Far Right Corner */}
               <div className="relative group">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -97,7 +97,7 @@ export const Header: React.FC = () => {
                   </span>
                 </motion.button>
 
-                {/* Dropdown Menu */}
+                {/* Dropdown Menu - Positioned from right edge */}
                 <div className="absolute right-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-700/50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                   <div className="py-2">
                     <div className="px-4 py-3 border-b border-slate-700/50">
