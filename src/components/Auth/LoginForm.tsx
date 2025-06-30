@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { Button } from '../UI/Button';
+import { Input } from '../UI/Input';
+import { validateEmail, validatePassword } from '../../utils/validation';
 
 interface LoginFormData {
   email: string;
@@ -27,6 +30,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setError('');
+
+    // Validate inputs
+    const emailValidation = validateEmail(data.email);
+    const passwordValidation = validatePassword(data.password);
+
+    if (!emailValidation.isValid || !passwordValidation.isValid) {
+      setError('Please check your input and try again');
+      setLoading(false);
+      return;
+    }
 
     try {
       const success = await login(data.email, data.password);
@@ -59,72 +72,56 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  {...register('email', {
-                    required: 'Email is required',
-                    pattern: {
-                      value: /^\S+@\S+$/i,
-                      message: 'Invalid email address'
-                    }
-                  })}
-                  type="email"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+            <Input
+              {...register('email', {
+                required: 'Email is required',
+                validate: (value) => {
+                  const result = validateEmail(value);
+                  return result.isValid || result.errors[0];
+                }
+              })}
+              type="email"
+              label="Email address"
+              placeholder="Enter your email"
+              icon={Mail}
+              error={errors.email?.message}
+            />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters'
-                    }
-                  })}
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
+              <Input
+                {...register('password', {
+                  required: 'Password is required',
+                  validate: (value) => {
+                    const result = validatePassword(value);
+                    return result.isValid || result.errors[0];
+                  }
+                })}
+                type={showPassword ? 'text' : 'password'}
+                label="Password"
+                placeholder="Enter your password"
+                icon={Lock}
+                error={errors.password?.message}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+              loading={loading}
+              className="w-full"
             >
               {loading ? 'Signing in...' : 'Sign in'}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-6 text-center">

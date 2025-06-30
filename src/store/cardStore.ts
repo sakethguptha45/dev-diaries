@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Card, CardState } from '../types';
-import { supabase } from '../lib/supabase';
+import { cardService } from '../services/card.service';
+import { sortBy } from '../utils/array';
 
 export const useCardStore = create<CardState>((set, get) => ({
   cards: [],
@@ -12,47 +13,15 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const { data, error } = await supabase
-        .from('cards')
-        .insert({
-          title: cardData.title,
-          type: cardData.type,
-          content: cardData.content,
-          explanation: cardData.explanation,
-          links: cardData.links,
-          files: cardData.files,
-          tags: cardData.tags,
-          favorite: cardData.favorite,
-          user_id: cardData.userId
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding card:', error);
-        return;
-      }
-
-      if (data) {
-        const newCard: Card = {
-          id: data.id,
-          userId: data.user_id,
-          title: data.title,
-          type: data.type,
-          content: data.content,
-          explanation: data.explanation,
-          links: data.links,
-          files: data.files,
-          tags: data.tags,
-          favorite: data.favorite,
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.updated_at)
-        };
-
+      const newCard = await cardService.createCard(cardData);
+      
+      if (newCard) {
         set((state) => ({
-          cards: [...state.cards, newCard],
+          cards: [newCard, ...state.cards],
           loading: false
         }));
+      } else {
+        set({ loading: false });
       }
     } catch (error) {
       console.error('Error adding card:', error);
@@ -64,50 +33,17 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const updateData: any = {};
-      if (updates.title !== undefined) updateData.title = updates.title;
-      if (updates.type !== undefined) updateData.type = updates.type;
-      if (updates.content !== undefined) updateData.content = updates.content;
-      if (updates.explanation !== undefined) updateData.explanation = updates.explanation;
-      if (updates.links !== undefined) updateData.links = updates.links;
-      if (updates.files !== undefined) updateData.files = updates.files;
-      if (updates.tags !== undefined) updateData.tags = updates.tags;
-      if (updates.favorite !== undefined) updateData.favorite = updates.favorite;
+      const updatedCard = await cardService.updateCard(id, updates);
       
-      updateData.updated_at = new Date().toISOString();
-
-      const { data, error } = await supabase
-        .from('cards')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating card:', error);
-        return;
-      }
-
-      if (data) {
+      if (updatedCard) {
         set((state) => ({
           cards: state.cards.map((card) =>
-            card.id === id
-              ? {
-                  ...card,
-                  title: data.title,
-                  type: data.type,
-                  content: data.content,
-                  explanation: data.explanation,
-                  links: data.links,
-                  files: data.files,
-                  tags: data.tags,
-                  favorite: data.favorite,
-                  updatedAt: new Date(data.updated_at)
-                }
-              : card
+            card.id === id ? updatedCard : card
           ),
           loading: false
         }));
+      } else {
+        set({ loading: false });
       }
     } catch (error) {
       console.error('Error updating card:', error);
@@ -119,20 +55,16 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const { error } = await supabase
-        .from('cards')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting card:', error);
-        return;
+      const success = await cardService.deleteCard(id);
+      
+      if (success) {
+        set((state) => ({
+          cards: state.cards.filter((card) => card.id !== id),
+          loading: false
+        }));
+      } else {
+        set({ loading: false });
       }
-
-      set((state) => ({
-        cards: state.cards.filter((card) => card.id !== id),
-        loading: false
-      }));
     } catch (error) {
       console.error('Error deleting card:', error);
       set({ loading: false });
@@ -144,34 +76,13 @@ export const useCardStore = create<CardState>((set, get) => ({
       const card = get().cards.find(c => c.id === id);
       if (!card) return;
 
-
-      // Only update the favorite field, don't touch updated_at
-      const { data, error } = await supabase
-        .from('cards')
-        .update({ 
-          favorite: !card.favorite
-
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error toggling favorite:', error);
-        return;
-      }
-
-      if (data) {
+      const success = await cardService.toggleFavorite(id, card.favorite);
+      
+      if (success) {
         set((state) => ({
           cards: state.cards.map((card) =>
             card.id === id
-              ? { 
-                  ...card, 
-
-                  favorite: data.favorite
-                  // Keep the original updatedAt timestamp
-
-                }
+              ? { ...card, favorite: !card.favorite }
               : card
           ),
         }));
@@ -185,33 +96,8 @@ export const useCardStore = create<CardState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading cards:', error);
-        set({ loading: false });
-        return;
-      }
-
-      const cards: Card[] = data.map(item => ({
-        id: item.id,
-        userId: item.user_id,
-        title: item.title,
-        type: item.type,
-        content: item.content,
-        explanation: item.explanation,
-        links: item.links,
-        files: item.files,
-        tags: item.tags,
-        favorite: item.favorite,
-        createdAt: new Date(item.created_at),
-        updatedAt: new Date(item.updated_at)
-      }));
-
+      const cards = await cardService.getUserCards(userId);
+      
       set({ cards, loading: false });
     } catch (error) {
       console.error('Error loading cards:', error);
@@ -229,17 +115,16 @@ export const useCardStore = create<CardState>((set, get) => ({
 
   getRecentCards: () => {
     const { cards } = get();
-    return cards
-      .filter(card => card.updatedAt)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 10);
+    return sortBy(cards, (card) => card.updatedAt, 'desc').slice(0, 10);
   },
 
   getFavoriteCards: () => {
     const { cards } = get();
-    return cards
-      .filter(card => card.favorite)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    return sortBy(
+      cards.filter(card => card.favorite),
+      (card) => card.updatedAt,
+      'desc'
+    );
   },
 
   getAllTags: () => {

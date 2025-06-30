@@ -5,6 +5,9 @@ import { useCardStore } from './store/cardStore';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EditorPage } from './pages/EditorPage';
+import { ErrorBoundary } from './components/UI/ErrorBoundary';
+import { LoadingSpinner } from './components/UI/LoadingSpinner';
+import { ROUTES } from './constants';
 
 function App() {
   const { isAuthenticated, loading, user, initialize } = useAuthStore();
@@ -23,10 +26,7 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-slate-300">Loading...</p>
-        </div>
+        <LoadingSpinner size="lg" color="white" text="Loading..." />
       </div>
     );
   }
@@ -36,14 +36,16 @@ function App() {
   }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/editor" element={<EditorPage />} />
-        <Route path="/editor/:id" element={<EditorPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          <Route path={ROUTES.HOME} element={<DashboardPage />} />
+          <Route path={ROUTES.EDITOR} element={<EditorPage />} />
+          <Route path={ROUTES.EDITOR_WITH_ID} element={<EditorPage />} />
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

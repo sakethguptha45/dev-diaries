@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { AuthState, User } from '../types';
-import { supabase } from '../lib/supabase';
+import { authService } from '../services/auth.service';
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -9,7 +9,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await authService.getCurrentSession();
       
       if (session?.user) {
         const user: User = {
@@ -34,28 +34,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // Listen for auth changes
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session?.user) {
-          const user: User = {
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email || '',
-            isEmailVerified: session.user.email_confirmed_at !== null,
-            createdAt: new Date(session.user.created_at)
-          };
-          
-          set({ 
-            user, 
-            isAuthenticated: true, 
-            loading: false 
-          });
-        } else {
-          set({ 
-            user: null, 
-            isAuthenticated: false, 
-            loading: false 
-          });
-        }
+      authService.onAuthStateChange((user) => {
+        set({ 
+          user, 
+          isAuthenticated: !!user, 
+          loading: false 
+        });
       });
     } catch (error) {
       console.error('Error initializing auth:', error);
@@ -68,135 +52,55 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email: string, password: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    const result = await authService.login({ email, password });
+    
+    if (result.success && result.user) {
+      set({ 
+        user: result.user, 
+        isAuthenticated: true 
       });
-
-      if (error) {
-        console.error('Login error:', error);
-        return false;
-      }
-
-      if (data.user) {
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || data.user.email || '',
-          isEmailVerified: data.user.email_confirmed_at !== null,
-          createdAt: new Date(data.user.created_at)
-        };
-        
-        set({ 
-          user, 
-          isAuthenticated: true 
-        });
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
+      return true;
     }
+    
+    return false;
   },
 
-  register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-          },
-        },
+  register: async (email: string, password: string, name: string) => {
+    const result = await authService.register({ email, password, name });
+    
+    if (result.success && result.user) {
+      set({ 
+        user: result.user, 
+        isAuthenticated: true 
       });
-
-      if (error) {
-        console.error('Registration error:', error);
-        return { success: false, errorMessage: error.message };
-      }
-
-      if (data.user) {
-        // Check if email confirmation is required
-        if (!data.session) {
-          return { success: true, needsVerification: true };
-        }
-
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata?.name || name,
-          isEmailVerified: data.user.email_confirmed_at !== null,
-          createdAt: new Date(data.user.created_at)
-        };
-        
-        set({ 
-          user, 
-          isAuthenticated: true 
-        });
-        return { success: true, needsVerification: false };
-      }
-
-      return { success: false, errorMessage: 'Registration failed. Please try again.' };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, errorMessage: 'An error occurred. Please try again.' };
     }
+    
+    return result;
   },
 
   logout: async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      // Always clear local state regardless of server response
-      set({ 
-        user: null, 
-        isAuthenticated: false 
-      });
-    }
+    await authService.logout();
+    set({ 
+      user: null, 
+      isAuthenticated: false 
+    });
   },
 
-  deleteAccount: async (): Promise<{ success: boolean; errorMessage?: string }> => {
-    try {
-      const { user } = get();
-      if (!user) {
-        return { success: false, errorMessage: 'No user logged in' };
-      }
+  deleteAccount: async () => {
+    const { user } = get();
+    if (!user) {
+      return { success: false, errorMessage: 'No user logged in' };
+    }
 
-      // First delete all user's cards (handled by foreign key cascade)
-      const { error: cardsError } = await supabase
-        .from('cards')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (cardsError) {
-        console.error('Error deleting user cards:', cardsError);
-        return { success: false, errorMessage: 'Failed to delete user data' };
-      }
-
-      // Delete the user account
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-
-      if (deleteError) {
-        console.error('Error deleting user account:', deleteError);
-        return { success: false, errorMessage: 'Failed to delete account' };
-      }
-
-      // Clear local state
+    const result = await authService.deleteAccount(user.id);
+    
+    if (result.success) {
       set({ 
         user: null, 
         isAuthenticated: false 
       });
-
-      return { success: true };
-    } catch (error) {
-      console.error('Delete account error:', error);
-      return { success: false, errorMessage: 'An error occurred while deleting account' };
     }
+    
+    return result;
   }
 }));
