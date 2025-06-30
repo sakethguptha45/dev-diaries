@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { VerificationForm } from './VerificationForm';
+import { requestNotificationPermission } from '../../services/emailService';
 
 interface RegisterFormData {
   name: string;
@@ -32,6 +33,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   } = useForm<RegisterFormData>();
 
   const password = watch('password');
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
 
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
@@ -127,6 +133,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
         </div>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          {/* Development Notice */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-2">📧 Email Verification System</p>
+              <p className="text-xs text-blue-700">
+                After registration, you'll receive a 6-digit verification code. 
+                Check the browser console for the code during development.
+              </p>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
