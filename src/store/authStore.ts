@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-
 import { AuthState, User, VerificationState } from '../types';
 import { supabase } from '../lib/supabase';
 import { AuthService } from '../services/auth.service';
@@ -51,7 +50,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // Listen for auth changes
-
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
@@ -78,7 +76,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             verification: initialVerificationState
           });
         }
-
       });
     } catch (error) {
       console.error('Error initializing auth:', error);
@@ -91,7 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email: string, password: string): Promise<boolean> => {
-    const result = await AuthService.signIn({ email, password });
+    const result = await AuthService.signIn(email, password);
     
     if (result.success && result.user) {
       set({ 
@@ -567,4 +564,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ verification: initialVerificationState });
   },
 
+  deleteAccount: async (): Promise<{ success: boolean; errorMessage?: string }> => {
+    try {
+      // This would need to be implemented with proper backend support
+      // For now, just sign out the user
+      await supabase.auth.signOut();
+      set({ 
+        user: null, 
+        isAuthenticated: false,
+        verification: initialVerificationState
+      });
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        errorMessage: 'Failed to delete account. Please try again.' 
+      };
+    }
+  }
 }));
