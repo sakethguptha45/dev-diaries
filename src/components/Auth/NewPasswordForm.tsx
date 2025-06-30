@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Lock, CheckCircle, AlertCircle, Shield, ArrowRight } from 'lucide-react';
@@ -19,6 +19,7 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
 
   const {
     register,
@@ -29,6 +30,45 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
 
   const password = watch('password');
   const confirmPassword = watch('confirmPassword');
+
+  // Check session validity on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        console.log('🔍 Checking session validity for password reset...');
+        
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Session check error:', error);
+          setSessionValid(false);
+          setError('Session expired. Please restart the password reset process.');
+          return;
+        }
+
+        if (!sessionData.session) {
+          console.error('❌ No active session found');
+          setSessionValid(false);
+          setError('No active session. Please restart the password reset process.');
+          return;
+        }
+
+        console.log('✅ Valid session found:', {
+          userId: sessionData.session.user?.id,
+          email: sessionData.session.user?.email,
+          expiresAt: sessionData.session.expires_at
+        });
+        
+        setSessionValid(true);
+      } catch (error) {
+        console.error('❌ Error checking session:', error);
+        setSessionValid(false);
+        setError('Failed to verify session. Please restart the password reset process.');
+      }
+    };
+
+    checkSession();
+  }, []);
 
   // Enhanced password validation
   const validatePassword = (password: string) => {
@@ -47,6 +87,11 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
   const passwordValidation = password ? validatePassword(password) : { isValid: false, requirements: {} };
 
   const onSubmit = async (data: NewPasswordFormData) => {
+    if (sessionValid === false) {
+      setError('Session expired. Please restart the password reset process.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -67,7 +112,7 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
         return;
       }
 
-      // Check if we have a valid session first
+      // Double-check session before proceeding
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -76,7 +121,7 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
         return;
       }
 
-      console.log('✅ Valid session found, proceeding with password update...');
+      console.log('✅ Session confirmed, proceeding with password update...');
 
       // Update the user's password using the current session
       const { data: updateData, error } = await supabase.auth.updateUser({
@@ -119,6 +164,61 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
       setLoading(false);
     }
   };
+
+  // Show loading state while checking session
+  if (sessionValid === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if session is invalid
+  if (sessionValid === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full space-y-8"
+        >
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+              <AlertCircle className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Session Expired</h2>
+            <p className="text-gray-600">Your password reset session has expired</p>
+          </div>
+
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+            <div className="text-center space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+              
+              <p className="text-gray-600 text-sm">
+                Please restart the password reset process from the beginning.
+              </p>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onSuccess}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/25 transition-all duration-300"
+              >
+                Back to sign in
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Success state
   if (success) {
@@ -166,6 +266,7 @@ export const NewPasswordForm: React.FC<NewPasswordFormProps> = ({ onSuccess }) =
     );
   }
 
+  // Main password form
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
       <motion.div

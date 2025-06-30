@@ -93,7 +93,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
     }
   };
 
-  // Verify code
+  // Verify code with enhanced session handling
   const handleVerify = async (codeToVerify?: string) => {
     const verificationCode = codeToVerify || code.join('');
     
@@ -103,7 +103,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
     }
 
     if (isLocked) {
-      setError('Too many failed attempts. Please wait before trying again.');
+      setError('Too many failed attempts. Please request a new code.');
       return;
     }
 
@@ -111,7 +111,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
     setError('');
 
     try {
-      console.log('🔍 Verifying password reset code:', verificationCode);
+      console.log('🔍 Verifying password reset code:', verificationCode, 'for email:', email);
       
       // Verify the OTP for password recovery
       const { data, error } = await supabase.auth.verifyOtp({
@@ -145,17 +145,40 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
         // Clear code inputs on error
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
-      } else if (data.session) {
-        console.log('✅ Password reset verification successful');
+      } else if (data.session && data.user) {
+        console.log('✅ Password reset verification successful! Session established.');
+        console.log('Session details:', {
+          accessToken: data.session.access_token ? 'present' : 'missing',
+          refreshToken: data.session.refresh_token ? 'present' : 'missing',
+          expiresAt: data.session.expires_at,
+          user: data.user.email
+        });
+        
         setSuccess('Code verified! Redirecting to password reset...');
         
-        // Set the session for password reset - this is crucial!
-        await supabase.auth.setSession(data.session);
-        
-        setTimeout(() => {
-          onVerified();
-        }, 1500);
+        // CRITICAL: Ensure the session is properly set before proceeding
+        try {
+          await supabase.auth.setSession(data.session);
+          console.log('✅ Session set successfully');
+          
+          // Verify the session was set correctly
+          const { data: sessionCheck } = await supabase.auth.getSession();
+          if (sessionCheck.session) {
+            console.log('✅ Session verification successful, proceeding to password reset');
+            
+            setTimeout(() => {
+              onVerified();
+            }, 1500);
+          } else {
+            console.error('❌ Session verification failed');
+            setError('Session setup failed. Please try again.');
+          }
+        } catch (sessionError) {
+          console.error('❌ Error setting session:', sessionError);
+          setError('Failed to establish secure session. Please try again.');
+        }
       } else {
+        console.error('❌ Verification response missing session or user data');
         setError('Verification failed. Please try again.');
       }
     } catch (error) {
@@ -173,13 +196,17 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
     setSuccess('');
 
     try {
+      console.log('🔄 Resending password reset code to:', email);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: undefined // Force OTP instead of link
       });
 
       if (error) {
+        console.error('❌ Failed to resend code:', error);
         setError(error.message || 'Failed to resend code');
       } else {
+        console.log('✅ New password reset code sent successfully');
         setSuccess('New verification code sent!');
         setCode(['', '', '', '', '', '']);
         setTimeRemaining(600); // Reset to 10 minutes
@@ -191,6 +218,7 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (error) {
+      console.error('Resend error:', error);
       setError('Network error. Please try again.');
     } finally {
       setIsResending(false);
@@ -394,6 +422,18 @@ export const ForgotPasswordVerificationForm: React.FC<ForgotPasswordVerification
               </button>
             </div>
           </div>
+
+          {/* Debug Info (development only) */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 p-3 bg-gray-50 rounded-lg border text-xs text-gray-600">
+              <p className="font-medium mb-1">🔧 Debug Info:</p>
+              <p>Email: {email}</p>
+              <p>Attempts: {attempts}/3</p>
+              <p>Time remaining: {timeRemaining}s</p>
+              <p>Can resend: {canResend ? 'Yes' : 'No'}</p>
+              <p>Is locked: {isLocked ? 'Yes' : 'No'}</p>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
