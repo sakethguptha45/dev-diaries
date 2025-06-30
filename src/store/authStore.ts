@@ -104,6 +104,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (email: string, password: string, name: string): Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }> => {
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return { 
+          success: false, 
+          errorMessage: 'Supabase is not properly configured. Please check your environment variables.' 
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -116,6 +124,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Registration error:', error);
+        
+        // Provide more specific error messages
+        if (error.message.includes('Failed to fetch')) {
+          return { 
+            success: false, 
+            errorMessage: 'Unable to connect to the server. Please check your internet connection and try again.' 
+          };
+        }
+        
         return { success: false, errorMessage: error.message };
       }
 
@@ -143,6 +160,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { success: false, errorMessage: 'Registration failed. Please try again.' };
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Handle network errors specifically
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        return { 
+          success: false, 
+          errorMessage: 'Unable to connect to the server. Please check your internet connection and Supabase configuration.' 
+        };
+      }
+      
       return { success: false, errorMessage: 'An error occurred. Please try again.' };
     }
   },
