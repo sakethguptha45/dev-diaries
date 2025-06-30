@@ -138,14 +138,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
               </button>
             </p>
           </div>
-
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800 font-medium mb-2">Demo Account:</p>
-            <p className="text-xs text-blue-700">
-              Email: demo@devdiaries.com<br />
-              Password: password123
-            </p>
-          </div>
         </div>
       </div>
     </div>
