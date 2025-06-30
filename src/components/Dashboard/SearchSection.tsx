@@ -1,7 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
-import { UI_CONSTANTS } from '../../constants';
 
 interface SearchSectionProps {
   searchQuery: string;
@@ -11,7 +10,7 @@ interface SearchSectionProps {
   allTags: string[];
   onClearSearch: () => void;
   visibleTagsCount: number;
-  onTagsContainerRef: (ref: HTMLDivElement | null) => void;
+  tagsContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 export const SearchSection: React.FC<SearchSectionProps> = ({
@@ -22,7 +21,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   allTags,
   onClearSearch,
   visibleTagsCount,
-  onTagsContainerRef,
+  tagsContainerRef,
 }) => {
   const hasFilters = searchQuery.trim() || selectedTags.length > 0;
 
@@ -63,7 +62,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         {/* Tags */}
         {allTags.length > 0 && (
           <div className="flex justify-center">
-            <div ref={onTagsContainerRef} className="w-full max-w-6xl">
+            <div ref={tagsContainerRef} className="w-full max-w-6xl">
               <div className="flex items-center justify-center space-x-3 overflow-hidden">
                 {allTags.slice(0, visibleTagsCount).map(tag => (
                   <motion.button

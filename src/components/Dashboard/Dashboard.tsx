@@ -60,11 +60,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
             allTags={allTags}
             onClearSearch={clearSearch}
             visibleTagsCount={visibleTagsCount}
-            onTagsContainerRef={(ref) => {
-              if (tagsContainerRef) {
-                (tagsContainerRef as any).current = ref;
-              }
-            }}
+            tagsContainerRef={tagsContainerRef}
           />
         )}
 
