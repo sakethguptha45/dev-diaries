@@ -163,11 +163,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     return filtered.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [userCards, searchQuery, localSearchQuery, globalSearchQuery, selectedTags]);
 
-  // Group cards by date for All Cards view
+  // Group cards by date for All Cards view - use updatedAt consistently
   const groupedCards = useMemo(() => {
     const groups: { [key: string]: Card[] } = {};
     
     filteredCards.forEach(card => {
+      // Use updatedAt for both grouping and display consistency
       const dateKey = format(ensureDate(card.updatedAt), 'yyyy-MM-dd');
       if (!groups[dateKey]) {
         groups[dateKey] = [];
