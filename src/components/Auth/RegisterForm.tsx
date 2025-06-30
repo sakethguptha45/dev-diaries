@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { VerificationForm } from './VerificationForm';
 
 interface RegisterFormData {
   name: string;
@@ -19,7 +20,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const {
     register,
@@ -38,7 +41,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
       const result = await registerUser(data.email, data.password, data.name);
       if (result.success) {
         if (result.needsVerification) {
-          setSuccess(true);
+          setUserEmail(data.email);
+          setShowVerification(true);
         }
         // If no verification needed, user will be automatically logged in
       } else {
@@ -51,42 +55,58 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     }
   };
 
-  if (success) {
+  const handleVerificationSuccess = () => {
+    setShowSuccess(true);
+    setTimeout(() => {
+      onToggleMode(); // Go back to login
+    }, 3000);
+  };
+
+  const handleBackToRegister = () => {
+    setShowVerification(false);
+    setUserEmail('');
+  };
+
+  if (showSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-gray-600">We've sent a verification link to your email address</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Account Activated!</h2>
+            <p className="text-gray-600">Your account has been successfully verified</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
             <div className="text-center">
               <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                 <p className="text-sm text-green-800 mb-3">
-                  <strong>Please check your email and click the verification link to activate your account.</strong>
+                  <strong>🎉 Welcome to Dev Diaries!</strong>
                 </p>
                 <p className="text-xs text-green-700">
-                  After clicking the link, you will be redirected to a verification success page, and then you can sign in to your new account.
-                </p>
-                <p className="text-xs text-green-600 mt-2">
-                  <strong>Note:</strong> The verification link will redirect you to a dedicated verification page.
+                  Your email has been verified and your account is now active. Redirecting to sign in...
                 </p>
               </div>
               
-              <button
-                onClick={onToggleMode}
-                className="text-sm text-purple-600 hover:text-purple-500 transition-colors duration-200"
-              >
-                Back to sign in
-              </button>
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (showVerification) {
+    return (
+      <VerificationForm
+        email={userEmail}
+        onBack={handleBackToRegister}
+        onSuccess={handleVerificationSuccess}
+      />
     );
   }
 

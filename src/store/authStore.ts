@@ -1,11 +1,28 @@
 import { create } from 'zustand';
-import { AuthState, User } from '../types';
+import { AuthState, User, VerificationState } from '../types';
 import { supabase } from '../lib/supabase';
+import { verificationManager } from '../utils/verification';
+import { EmailService } from '../services/emailService';
+
+const initialVerificationState: VerificationState = {
+  isVerifying: false,
+  email: '',
+  code: '',
+  timeRemaining: 0,
+  attempts: 0,
+  maxAttempts: 3,
+  canResend: false,
+  isLocked: false,
+  lockUntil: null,
+  lastCodeSent: null,
+  errors: [],
+};
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   loading: true,
+  verification: initialVerificationState,
 
   initialize: async () => {
     try {
@@ -146,6 +163,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (data.user) {
         // Check if email confirmation is required
         if (!data.session) {
+          // Start verification process
+          await get().sendVerificationCode(email);
           return { success: true, needsVerification: true };
         }
 
@@ -185,10 +204,148 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await supabase.auth.signOut();
       set({ 
         user: null, 
-        isAuthenticated: false 
+        isAuthenticated: false,
+        verification: initialVerificationState
       });
     } catch (error) {
       console.error('Logout error:', error);
     }
-  }
+  },
+
+  sendVerificationCode: async (email: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      // Check rate limiting
+      if (!verificationManager.checkRateLimit(email)) {
+        return { success: false, message: 'Too many requests. Please try again later.' };
+      }
+
+      // Create verification session
+      const { code } = verificationManager.createSession(email);
+      
+      // Send email
+      const emailService = EmailService.getInstance();
+      const emailSent = await emailService.sendVerificationCode(email, code);
+      
+      if (!emailSent) {
+        return { success: false, message: 'Failed to send verification email.' };
+      }
+
+      // Start timer
+      const startTimer = () => {
+        const updateTimer = () => {
+          const timeRemaining = verificationManager.getTimeRemaining(email);
+          const attemptsRemaining = verificationManager.getAttemptsRemaining(email);
+          const session = verificationManager.getSession(email);
+          
+          set(state => ({
+            verification: {
+              ...state.verification,
+              isVerifying: true,
+              email,
+              timeRemaining,
+              attempts: session ? session.attempts.filter(a => !a.success).length : 0,
+              canResend: timeRemaining === 0,
+              isLocked: session ? verificationManager.isSessionLocked(session) : false,
+              lockUntil: session?.lockUntil || null,
+            }
+          }));
+
+          if (timeRemaining > 0) {
+            setTimeout(updateTimer, 1000);
+          }
+        };
+        updateTimer();
+      };
+
+      startTimer();
+      
+      return { success: true, message: 'Verification code sent successfully!' };
+    } catch (error) {
+      console.error('Error sending verification code:', error);
+      return { success: false, message: 'Failed to send verification code.' };
+    }
+  },
+
+  verifyCode: async (code: string): Promise<{ success: boolean; message?: string }> => {
+    const { verification } = get();
+    
+    try {
+      const result = verificationManager.verifyCode(verification.email, code);
+      
+      if (result.success) {
+        // Reset verification state
+        set({ verification: initialVerificationState });
+        return { success: true, message: result.message };
+      } else {
+        // Update verification state with new attempt info
+        const session = verificationManager.getSession(verification.email);
+        set(state => ({
+          verification: {
+            ...state.verification,
+            attempts: session ? session.attempts.filter(a => !a.success).length : 0,
+            isLocked: result.isLocked || false,
+            lockUntil: result.lockUntil || null,
+          }
+        }));
+        
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error('Error verifying code:', error);
+      return { success: false, message: 'An error occurred during verification.' };
+    }
+  },
+
+  resendCode: async (): Promise<{ success: boolean; message?: string }> => {
+    const { verification } = get();
+    
+    try {
+      const result = verificationManager.resendCode(verification.email);
+      
+      if (result.success && result.code) {
+        // Send new email
+        const emailService = EmailService.getInstance();
+        const emailSent = await emailService.sendVerificationCode(verification.email, result.code);
+        
+        if (!emailSent) {
+          return { success: false, message: 'Failed to send verification email.' };
+        }
+
+        // Restart timer
+        const startTimer = () => {
+          const updateTimer = () => {
+            const timeRemaining = verificationManager.getTimeRemaining(verification.email);
+            const session = verificationManager.getSession(verification.email);
+            
+            set(state => ({
+              verification: {
+                ...state.verification,
+                timeRemaining,
+                canResend: timeRemaining === 0,
+                attempts: session ? session.attempts.filter(a => !a.success).length : 0,
+              }
+            }));
+
+            if (timeRemaining > 0) {
+              setTimeout(updateTimer, 1000);
+            }
+          };
+          updateTimer();
+        };
+
+        startTimer();
+        
+        return { success: true, message: result.message };
+      } else {
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error('Error resending code:', error);
+      return { success: false, message: 'Failed to resend verification code.' };
+    }
+  },
+
+  resetVerification: () => {
+    set({ verification: initialVerificationState });
+  },
 }));

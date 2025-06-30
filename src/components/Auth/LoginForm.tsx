@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoginFormData {
   email: string;
@@ -17,12 +18,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<LoginFormData>();
+
+  // Check for email verification success in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const hashParams = new URLSearchParams(hash.substring(1));
+    
+    const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
+    const type = urlParams.get('type') || hashParams.get('type');
+    
+    if (type === 'signup' && accessToken) {
+      setShowSuccessMessage(true);
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Hide message after 3 seconds
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+    }
+  }, []);
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
@@ -50,6 +74,34 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
           <p className="text-gray-600">Sign in to your Dev Diaries account</p>
         </div>
+
+        {/* Success Message */}
+        <AnimatePresence>
+          {showSuccessMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50"
+            >
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl border border-green-400/20 backdrop-blur-sm">
+                <div className="flex items-center space-x-3">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  >
+                    <CheckCircle className="h-6 w-6" />
+                  </motion.div>
+                  <div>
+                    <p className="font-semibold text-sm">Email Verified Successfully!</p>
+                    <p className="text-xs opacity-90">Your account has been activated</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

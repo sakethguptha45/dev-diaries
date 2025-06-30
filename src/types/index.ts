@@ -34,14 +34,33 @@ export interface SearchResult {
   total: number;
 }
 
+export interface VerificationState {
+  isVerifying: boolean;
+  email: string;
+  code: string;
+  timeRemaining: number;
+  attempts: number;
+  maxAttempts: number;
+  canResend: boolean;
+  isLocked: boolean;
+  lockUntil: Date | null;
+  lastCodeSent: Date | null;
+  errors: string[];
+}
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
+  verification: VerificationState;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; needsVerification?: boolean; errorMessage?: string }>;
   logout: () => void;
   initialize: () => Promise<void>;
+  sendVerificationCode: (email: string) => Promise<{ success: boolean; message?: string }>;
+  verifyCode: (code: string) => Promise<{ success: boolean; message?: string }>;
+  resendCode: () => Promise<{ success: boolean; message?: string }>;
+  resetVerification: () => void;
 }
 
 export interface CardState {
