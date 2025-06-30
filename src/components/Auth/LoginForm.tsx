@@ -187,7 +187,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
 
             <button
 
-            <Button
+            <Button>
 
               type="submit"
               loading={loading}
