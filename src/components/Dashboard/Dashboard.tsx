@@ -184,7 +184,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
 
     return sortedGroups;
   }, [filteredCards]);
- console.log('grroupppspspspsp ', groupedCards)
+
   const handleNewCard = () => {
     navigate('/editor');
   };
@@ -258,19 +258,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   }, [filteredCards, favoriteCards, recentCards, activeView]);
 
   const formatDateHeader = (dateString: string) => {
-    // Use the same normalization approach to ensure consistency
-    const normalizedDate = normalizeDate(dateString);
-    const today = normalizeDate(new Date());
-    const yesterday = new Date(today);
+    // Parse the date string directly as YYYY-MM-DD to avoid timezone issues
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+    
+    const today = new Date();
+    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const yesterday = new Date(todayNormalized);
     yesterday.setDate(yesterday.getDate() - 1);
-    console.log('datestring -> ', dateString);
-    console.log('date -> ', normalizedDate)
-    if (isSameDay(normalizedDate, today)) {
+
+    if (isSameDay(date, todayNormalized)) {
       return 'Today';
-    } else if (isSameDay(normalizedDate, yesterday)) {
+    } else if (isSameDay(date, yesterday)) {
       return 'Yesterday';
     } else {
-      return format(normalizedDate, 'MMMM d, yyyy');
+      return format(date, 'MMMM d, yyyy');
     }
   };
 
