@@ -254,18 +254,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   // Show welcome section only if no cards exist at all
   const showWelcome = userCards.length === 0;
 
-  // Get remaining cards (excluding favorites and recent) for dashboard view
-  const remainingCards = useMemo(() => {
-    if (activeView !== 'dashboard') return [];
-    
-    const favoriteIds = new Set(favoriteCards.map(card => card.id));
-    const recentIds = new Set(recentCards.map(card => card.id));
-    
-    return filteredCards.filter(card => 
-      !favoriteIds.has(card.id) && !recentIds.has(card.id)
-    );
-  }, [filteredCards, favoriteCards, recentCards, activeView]);
-
   const formatDateHeader = (dateString: string) => {
     // Parse the date string directly as YYYY-MM-DD to avoid timezone issues
     const [year, month, day] = dateString.split('-').map(Number);
@@ -653,28 +641,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       </div>
                     ))}
                   </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Remaining Cards */}
-            {remainingCards.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                <h2 className="text-3xl font-bold text-white px-4">📚 More Cards</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
-                  {remainingCards.slice(0, 8).map((card, index) => (
-                    <div key={card.id}>
-                      <CardPreview
-                        card={card}
-                        onToggleFavorite={toggleFavorite}
-                        onClick={handleCardClick}
-                      />
-                    </div>
-                  ))}
                 </div>
               </motion.div>
             )}
