@@ -184,7 +184,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
 
     return sortedGroups;
   }, [filteredCards]);
-
+ console.log('grroupppspspspsp ', groupedCards)
   const handleNewCard = () => {
     navigate('/editor');
   };
