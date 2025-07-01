@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Save, ArrowLeft, Heart, FileHeart as HeartFilled, Tag, Link as LinkIcon, Upload, Trash2, Plus, X, ExternalLink } from 'lucide-react';
+import { Save, ArrowLeft, Heart, FileHeart as HeartFilled, Tag, Link as LinkIcon, Plus, X, ExternalLink, Trash2 } from 'lucide-react';
 import { RichTextEditor } from '../components/Editor/RichTextEditor';
 import { useCardStore } from '../store/cardStore';
 import { useAuthStore } from '../store/authStore';
@@ -12,7 +12,6 @@ export const EditorPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { cards, addCard, updateCard, deleteCard, toggleFavorite } = useCardStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(!id);
   const [title, setTitle] = useState('');
@@ -23,7 +22,6 @@ export const EditorPage: React.FC = () => {
   const [newLink, setNewLink] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const currentCard = id ? cards.find(card => card.id === id) : null;
 
@@ -123,22 +121,6 @@ export const EditorPage: React.FC = () => {
 
   const removeLink = (linkToRemove: string) => {
     setLinks(links.filter(link => link !== linkToRemove));
-  };
-
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      setSelectedFiles(prev => [...prev, ...fileArray]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleBack = () => {
@@ -397,74 +379,6 @@ export const EditorPage: React.FC = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
-
-            {/* File Attachments */}
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/40 p-6 shadow-lg"
-            >
-              <div className="flex items-center space-x-2 mb-4">
-                <Upload className="h-5 w-5 text-emerald-500" />
-                <h3 className="font-semibold text-gray-900">Attachments</h3>
-              </div>
-
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div 
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors duration-200 cursor-pointer"
-                    onClick={handleFileSelect}
-                  >
-                    <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">
-                      Drag files here or click to upload
-                    </p>
-                    <button 
-                      type="button"
-                      className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                    >
-                      Choose Files
-                    </button>
-                  </div>
-
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="*/*"
-                  />
-
-                  {/* Selected files list */}
-                  {selectedFiles.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-gray-700">Selected Files:</h4>
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-emerald-700 truncate">{file.name}</p>
-                            <p className="text-xs text-emerald-600">{(file.size / 1024).toFixed(1)} KB</p>
-                          </div>
-                          <button
-                            onClick={() => removeFile(index)}
-                            className="text-emerald-400 hover:text-red-500 transition-colors duration-200 ml-2"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 text-center py-4">
-                  No attachments
-                </p>
-              )}
             </motion.div>
           </div>
         </div>
