@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Editor } from '@tiptap/react';
-import { Bold, Italic, Underline, Strikethrough, Code, Highlighter as Highlight, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, Quote, Minus, Link, Image, Table, Type, Palette, ChevronDown, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Bold, Italic, Underline, Strikethrough, Highlighter as Highlight, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, Quote, Minus, Link, Image, Table, Type, Palette, ChevronDown, Heading1, Heading2, Heading3 } from 'lucide-react';
 
 interface EditorToolbarProps {
   editor: Editor;
@@ -351,20 +351,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onAddImage
             <Quote className="h-4 w-4" />
             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
               Quote Block
-            </div>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`group relative p-2 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-sm ${
-              editor.isActive('code') ? 'bg-gray-200 text-gray-800' : 'text-gray-600 hover:text-gray-800'
-            }`}
-            title="Inline Code"
-          >
-            <Code className="h-4 w-4" />
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-              Inline Code
             </div>
           </button>
           
