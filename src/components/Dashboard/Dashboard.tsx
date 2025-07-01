@@ -540,7 +540,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   {recentCanScrollLeft && (
                     <button
                       onClick={() => scrollCarousel('left', recentScrollRef)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all duration-300 opacity-30 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
                         transform: 'translateY(-50%)',
                         position: 'absolute',
@@ -555,7 +555,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   {recentCanScrollRight && (
                     <button
                       onClick={() => scrollCarousel('right', recentScrollRef)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all duration-300 opacity-30 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
                         transform: 'translateY(-50%)',
                         position: 'absolute',
@@ -608,7 +608,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   {favoritesCanScrollLeft && (
                     <button
                       onClick={() => scrollCarousel('left', favoritesScrollRef)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all duration-300 opacity-30 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
                         transform: 'translateY(-50%)',
                         position: 'absolute',
@@ -623,7 +623,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   {favoritesCanScrollRight && (
                     <button
                       onClick={() => scrollCarousel('right', favoritesScrollRef)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/40 hover:bg-black/80 text-white rounded-full transition-all duration-300 opacity-30 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
                         transform: 'translateY(-50%)',
                         position: 'absolute',
