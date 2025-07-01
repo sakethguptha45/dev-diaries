@@ -120,8 +120,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }
             >
               <CheckCircle className="h-8 w-8 text-white" />
             </motion.div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Password Reset Complete!</h2>
-            <p className="text-gray-600">Your password has been successfully updated</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Password successfully updated</h2>
+            <p className="text-gray-600">Your password has been changed successfully</p>
           </div>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">

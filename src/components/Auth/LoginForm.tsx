@@ -22,6 +22,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showPasswordResetMessage, setShowPasswordResetMessage] = useState(false);
 
   const {
     register,
@@ -29,7 +30,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
     formState: { errors }
   } = useForm<LoginFormData>();
 
-  // Check for email verification success in URL
+  // Check for email verification success or password reset success in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
@@ -37,6 +38,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
     
     const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
     const type = urlParams.get('type') || hashParams.get('type');
+    
+    // Check for password reset success from localStorage
+    const passwordResetSuccess = localStorage.getItem('passwordResetSuccess');
+    if (passwordResetSuccess) {
+      setShowPasswordResetMessage(true);
+      localStorage.removeItem('passwordResetSuccess');
+      
+      // Hide message after successful login or after 10 seconds
+      setTimeout(() => {
+        setShowPasswordResetMessage(false);
+      }, 10000);
+    }
     
     if (type === 'signup' && accessToken) {
       setShowSuccessMessage(true);
@@ -57,7 +70,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
 
     try {
       const success = await login(data.email, data.password);
-      if (!success) {
+      if (success) {
+        // Clear password reset message on successful login
+        setShowPasswordResetMessage(false);
+      } else {
         setError('Invalid email or password');
       }
     } catch (err) {
@@ -78,7 +94,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
           <p className="text-gray-600">Sign in to your Dev Diaries account</p>
         </div>
 
-        {/* Success Message */}
+        {/* Email Verification Success Message */}
         <AnimatePresence>
           {showSuccessMessage && (
             <motion.div
@@ -100,6 +116,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
                     <p className="font-semibold text-sm">Email Verified Successfully!</p>
                     <p className="text-xs opacity-90">Your account has been activated</p>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Password Reset Success Message */}
+        <AnimatePresence>
+          {showPasswordResetMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6"
+            >
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900 text-sm">Your password has been reset.</p>
+                  <p className="text-blue-700 text-xs">Please sign in with your new password</p>
                 </div>
               </div>
             </motion.div>

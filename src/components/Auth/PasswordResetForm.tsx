@@ -67,13 +67,20 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
     checkSession();
   }, []);
 
+  // Password validation
+  const passwordValid = newPassword && newPassword.length >= 8;
   const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
-  const passwordValid = newPassword && newPassword.length >= 6;
   const canSubmit = passwordValid && passwordsMatch && !loading;
 
   const onSubmit = async (data: PasswordResetFormData) => {
     if (!sessionValid) {
       setError('Session expired. Please restart the password reset process.');
+      return;
+    }
+
+    // Verify both passwords match exactly
+    if (data.newPassword !== data.confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -94,7 +101,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
 
       console.log('✅ Session confirmed, updating password...');
 
-      // Update the user's password
+      // Update the user's password in the database
       const { data: updateData, error } = await supabase.auth.updateUser({
         password: data.newPassword
       });
@@ -117,7 +124,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
         // Sign out the user for security
         await supabase.auth.signOut();
         
-        // Call success callback
+        // Call success callback which will show success message and redirect
         onSuccess();
       } else {
         setError('Password update failed. Please try again.');
@@ -229,8 +236,8 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
                   {...register('newPassword', {
                     required: 'New password is required',
                     minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters'
+                      value: 8,
+                      message: 'Password must be at least 8 characters'
                     }
                   })}
                   type={showNewPassword ? 'text' : 'password'}
@@ -258,7 +265,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
               {newPassword && (
                 <div className="mt-2">
                   <div className={`text-sm ${passwordValid ? 'text-green-600' : 'text-red-600'}`}>
-                    {passwordValid ? '✓ Password meets requirements' : '✗ Password must be at least 6 characters'}
+                    {passwordValid ? '✓ Password meets requirements' : '✗ Password must be at least 8 characters'}
                   </div>
                 </div>
               )}
@@ -294,7 +301,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
                 </button>
               </div>
               
-              {/* Password Match Validation */}
+              {/* Real-time password matching validation */}
               {newPassword && confirmPassword && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -324,9 +331,9 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm font-medium text-blue-900 mb-2">Password Requirements:</p>
               <div className="text-xs text-blue-800 space-y-1">
-                <div className={`flex items-center space-x-2 ${newPassword?.length >= 6 ? 'text-green-700' : ''}`}>
-                  <span>{newPassword?.length >= 6 ? '✓' : '•'}</span>
-                  <span>At least 6 characters (letters or numbers)</span>
+                <div className={`flex items-center space-x-2 ${newPassword?.length >= 8 ? 'text-green-700' : ''}`}>
+                  <span>{newPassword?.length >= 8 ? '✓' : '•'}</span>
+                  <span>Minimum 8 characters</span>
                 </div>
               </div>
             </div>
@@ -350,7 +357,7 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
                 </div>
               ) : (
                 <div className="flex items-center justify-center space-x-2">
-                  <span>Update Password</span>
+                  <span>Reset Password</span>
                   <ArrowRight className="h-4 w-4" />
                 </div>
               )}
