@@ -538,9 +538,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 <div className="relative group">
                   {/* Left arrow - FIXED positioning to prevent shift */}
                   {recentCanScrollLeft && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                    <button
                       onClick={() => scrollCarousel('left', recentScrollRef)}
                       className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
@@ -550,14 +548,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       }}
                     >
                       <ChevronLeft className="h-6 w-6" />
-                    </motion.button>
+                    </button>
                   )}
                   
                   {/* Right arrow - FIXED positioning to prevent shift */}
                   {recentCanScrollRight && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                    <button
                       onClick={() => scrollCarousel('right', recentScrollRef)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
@@ -567,7 +563,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       }}
                     >
                       <ChevronRight className="h-6 w-6" />
-                    </motion.button>
+                    </button>
                   )}
                   
                   {/* Carousel content with proper padding for arrows */}
@@ -610,9 +606,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                 <div className="relative group">
                   {/* Left arrow - FIXED positioning to prevent shift */}
                   {favoritesCanScrollLeft && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                    <button
                       onClick={() => scrollCarousel('left', favoritesScrollRef)}
                       className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
@@ -622,14 +616,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       }}
                     >
                       <ChevronLeft className="h-6 w-6" />
-                    </motion.button>
+                    </button>
                   )}
                   
                   {/* Right arrow - FIXED positioning to prevent shift */}
                   {favoritesCanScrollRight && (
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
+                    <button
                       onClick={() => scrollCarousel('right', favoritesScrollRef)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
                       style={{ 
@@ -639,7 +631,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                       }}
                     >
                       <ChevronRight className="h-6 w-6" />
-                    </motion.button>
+                    </button>
                   )}
                   
                   {/* Carousel content with proper padding for arrows */}
