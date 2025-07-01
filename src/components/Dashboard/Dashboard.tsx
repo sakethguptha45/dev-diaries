@@ -263,7 +263,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     const today = normalizeDate(new Date());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
+    console.log('datestring -> ', dateString);
+    console.log('date -> ', normalizedDate)
     if (isSameDay(normalizedDate, today)) {
       return 'Today';
     } else if (isSameDay(normalizedDate, yesterday)) {
