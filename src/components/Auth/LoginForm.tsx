@@ -2,13 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-
 import { motion, AnimatePresence } from 'framer-motion';
-
 import { Button } from '../UI/Button';
 import { Input } from '../UI/Input';
-import { validateEmail, validatePassword } from '../../utils/validation';
-
 
 interface LoginFormData {
   email: string;
@@ -26,6 +22,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showPasswordResetMessage, setShowPasswordResetMessage] = useState(false);
 
   const {
     register,
@@ -33,7 +30,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
     formState: { errors }
   } = useForm<LoginFormData>();
 
-  // Check for email verification success in URL
+  // Check for email verification success or password reset success in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
@@ -41,6 +38,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
     
     const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
     const type = urlParams.get('type') || hashParams.get('type');
+    
+    // Check for password reset success from localStorage
+    const passwordResetSuccess = localStorage.getItem('passwordResetSuccess');
+    if (passwordResetSuccess) {
+      setShowPasswordResetMessage(true);
+      localStorage.removeItem('passwordResetSuccess');
+      
+      // Hide message after successful login or after 10 seconds
+      setTimeout(() => {
+        setShowPasswordResetMessage(false);
+      }, 10000);
+    }
     
     if (type === 'signup' && accessToken) {
       setShowSuccessMessage(true);
@@ -59,19 +68,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
     setLoading(true);
     setError('');
 
-    // Validate inputs
-    const emailValidation = validateEmail(data.email);
-    const passwordValidation = validatePassword(data.password);
-
-    if (!emailValidation.isValid || !passwordValidation.isValid) {
-      setError('Please check your input and try again');
-      setLoading(false);
-      return;
-    }
-
     try {
       const success = await login(data.email, data.password);
-      if (!success) {
+      if (success) {
+        // Clear password reset message on successful login
+        setShowPasswordResetMessage(false);
+      } else {
         setError('Invalid email or password');
       }
     } catch (err) {
@@ -92,7 +94,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
           <p className="text-gray-600">Sign in to your Dev Diaries account</p>
         </div>
 
-        {/* Success Message */}
+        {/* Email Verification Success Message */}
         <AnimatePresence>
           {showSuccessMessage && (
             <motion.div
@@ -120,6 +122,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
           )}
         </AnimatePresence>
 
+        {/* Password Reset Success Message */}
+        <AnimatePresence>
+          {showPasswordResetMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6"
+            >
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900 text-sm">Your password has been reset.</p>
+                  <p className="text-blue-700 text-xs">Please sign in with your new password</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
@@ -128,49 +150,62 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPass
               </div>
             )}
 
-            <Input
-              {...register('email', {
-                required: 'Email is required',
-                validate: (value) => {
-                  const result = validateEmail(value);
-                  return result.isValid || result.errors[0];
-                }
-              })}
-              type="email"
-              label="Email address"
-              placeholder="Enter your email"
-              icon={Mail}
-              error={errors.email?.message}
-            />
-
+            {/* Email Field */}
             <div>
-              <Input
-                {...register('password', {
-                  required: 'Password is required',
-                  validate: (value) => {
-                    const result = validatePassword(value);
-                    return result.isValid || result.errors[0];
-                  }
-                })}
-                type={showPassword ? 'text' : 'password'}
-                label="Password"
-                placeholder="Enter your password"
-                icon={Lock}
-                error={errors.password?.message}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  {...register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^\S+@\S+$/i,
+                      message: 'Invalid email address'
+                    }
+                  })}
+                  type="email"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your email"
+                />
+              </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
+            {/* Password Field with Toggle */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  {...register('password', {
+                    required: 'Password is required'
+                  })}
+                  type={showPassword ? 'text' : 'password'}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
+            </div>
 
             {/* Forgot Password Link */}
             {onForgotPassword && (

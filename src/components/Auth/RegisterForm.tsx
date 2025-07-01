@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, User, BookOpen, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { VerificationForm } from './VerificationForm';
 
 interface RegisterFormData {
   name: string;
@@ -53,6 +54,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     }
   };
 
+  const handleVerificationSuccess = () => {
+    setShowSuccess(true);
+    
+    // Auto-redirect to sign in after 3 seconds
+    setTimeout(() => {
+      onToggleMode();
+    }, 3000);
+  };
+
+  const handleBackToRegistration = () => {
+    setShowVerification(false);
+    setUserEmail('');
+    setError('');
+  };
+
   if (showSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 px-4">
@@ -88,42 +104,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
 
   if (showVerification) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-              <Mail className="h-8 w-8 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h2>
-            <p className="text-gray-600">
-              We've sent a verification link to{' '}
-              <span className="font-semibold text-indigo-600">{userEmail}</span>
-            </p>
-          </div>
-
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-            <div className="text-center space-y-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800 font-medium mb-2">
-                  📧 Please check your email and click the verification link
-                </p>
-                <div className="text-xs text-blue-700 space-y-1">
-                  <p>✓ Check your inbox and spam folder</p>
-                  <p>✓ Click the verification link in the email</p>
-                  <p>✓ You'll be redirected back to sign in</p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setShowVerification(false)}
-                className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200"
-              >
-                ← Back to registration
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <VerificationForm
+        email={userEmail}
+        onBack={handleBackToRegistration}
+        onSuccess={handleVerificationSuccess}
+      />
     );
   }
 
