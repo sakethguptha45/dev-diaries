@@ -83,49 +83,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     return () => window.removeEventListener('resize', calculateVisibleTags);
   }, [allTags.length]);
 
-  // Update scroll button states
+  // Update scroll button states with improved detection
   const updateScrollButtons = () => {
     if (favoritesScrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = favoritesScrollRef.current;
-      setFavoritesCanScrollLeft(scrollLeft > 0);
-      setFavoritesCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      setFavoritesCanScrollLeft(scrollLeft > 5); // Small threshold to account for rounding
+      setFavoritesCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
     }
     
     if (recentScrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = recentScrollRef.current;
-      setRecentCanScrollLeft(scrollLeft > 0);
-      setRecentCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      setRecentCanScrollLeft(scrollLeft > 5); // Small threshold to account for rounding
+      setRecentCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
     }
   };
 
-  // Set up scroll listeners
+  // Set up scroll listeners with debouncing
   useEffect(() => {
     const favoritesEl = favoritesScrollRef.current;
     const recentEl = recentScrollRef.current;
 
+    // Debounced update function
+    let timeoutId: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateScrollButtons, 50);
+    };
+
     if (favoritesEl) {
-      favoritesEl.addEventListener('scroll', updateScrollButtons);
+      favoritesEl.addEventListener('scroll', debouncedUpdate);
     }
     if (recentEl) {
-      recentEl.addEventListener('scroll', updateScrollButtons);
+      recentEl.addEventListener('scroll', debouncedUpdate);
     }
 
-    // Initial check
-    updateScrollButtons();
+    // Initial check with delay to ensure content is rendered
+    const initialCheck = setTimeout(updateScrollButtons, 200);
 
     return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(initialCheck);
       if (favoritesEl) {
-        favoritesEl.removeEventListener('scroll', updateScrollButtons);
+        favoritesEl.removeEventListener('scroll', debouncedUpdate);
       }
       if (recentEl) {
-        recentEl.removeEventListener('scroll', updateScrollButtons);
+        recentEl.removeEventListener('scroll', debouncedUpdate);
       }
     };
   }, [favoriteCards.length, recentCards.length]);
 
-  // Update scroll buttons when content changes
+  // Update scroll buttons when content changes with delay
   useEffect(() => {
-    const timer = setTimeout(updateScrollButtons, 100);
+    const timer = setTimeout(updateScrollButtons, 300);
     return () => clearTimeout(timer);
   }, [favoriteCards.length, recentCards.length]);
 
@@ -277,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  // Netflix-style carousel scroll functions
+  // Netflix-style carousel scroll functions with improved positioning
   const scrollCarousel = (direction: 'left' | 'right', ref: React.RefObject<HTMLDivElement>) => {
     if (!ref.current) return;
     
@@ -291,6 +300,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
       left: newScroll,
       behavior: 'smooth'
     });
+
+    // Update button states after scroll animation
+    setTimeout(updateScrollButtons, 300);
   };
 
   // Clear search and filters
@@ -522,36 +534,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   </h2>
                 </div>
                 
-                {/* Netflix-style carousel container */}
+                {/* Netflix-style carousel container with FIXED arrow positioning */}
                 <div className="relative group">
-                  {/* Left arrow */}
+                  {/* Left arrow - FIXED positioning to prevent shift */}
                   {recentCanScrollLeft && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('left', recentScrollRef)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      style={{ 
+                        transform: 'translateY(-50%)',
+                        position: 'absolute',
+                        pointerEvents: 'auto'
+                      }}
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </motion.button>
                   )}
                   
-                  {/* Right arrow */}
+                  {/* Right arrow - FIXED positioning to prevent shift */}
                   {recentCanScrollRight && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('right', recentScrollRef)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      style={{ 
+                        transform: 'translateY(-50%)',
+                        position: 'absolute',
+                        pointerEvents: 'auto'
+                      }}
                     >
                       <ChevronRight className="h-6 w-6" />
                     </motion.button>
                   )}
                   
-                  {/* Carousel content */}
+                  {/* Carousel content with proper padding for arrows */}
                   <div 
                     ref={recentScrollRef}
-                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-4 py-2"
+                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-12 py-2"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {recentCards.map((card, index) => (
@@ -584,36 +606,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
                   </h2>
                 </div>
                 
-                {/* Netflix-style carousel container */}
+                {/* Netflix-style carousel container with FIXED arrow positioning */}
                 <div className="relative group">
-                  {/* Left arrow */}
+                  {/* Left arrow - FIXED positioning to prevent shift */}
                   {favoritesCanScrollLeft && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('left', favoritesScrollRef)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      style={{ 
+                        transform: 'translateY(-50%)',
+                        position: 'absolute',
+                        pointerEvents: 'auto'
+                      }}
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </motion.button>
                   )}
                   
-                  {/* Right arrow */}
+                  {/* Right arrow - FIXED positioning to prevent shift */}
                   {favoritesCanScrollRight && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => scrollCarousel('right', favoritesScrollRef)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/70 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 p-3 bg-black/80 hover:bg-black/90 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 shadow-xl backdrop-blur-sm border border-white/10"
+                      style={{ 
+                        transform: 'translateY(-50%)',
+                        position: 'absolute',
+                        pointerEvents: 'auto'
+                      }}
                     >
                       <ChevronRight className="h-6 w-6" />
                     </motion.button>
                   )}
                   
-                  {/* Carousel content */}
+                  {/* Carousel content with proper padding for arrows */}
                   <div 
                     ref={favoritesScrollRef}
-                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-4 py-2"
+                    className="flex space-x-6 overflow-x-auto scrollbar-hide scroll-smooth px-12 py-2"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
                     {favoriteCards.map((card, index) => (
