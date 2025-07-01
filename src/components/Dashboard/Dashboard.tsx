@@ -167,8 +167,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
     const groups: { [key: string]: Card[] } = {};
     
     filteredCards.forEach(card => {
-      // Use the already normalized updatedAt date
-      const dateKey = format(card.updatedAt, 'yyyy-MM-dd');
+      // Use the already normalized updatedAt date and format it consistently
+      const normalizedDate = normalizeDate(card.updatedAt);
+      const dateKey = format(normalizedDate, 'yyyy-MM-dd');
 
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -257,17 +258,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ searchQuery = '' }) => {
   }, [filteredCards, favoriteCards, recentCards, activeView]);
 
   const formatDateHeader = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
+    // Use the same normalization approach to ensure consistency
+    const normalizedDate = normalizeDate(dateString);
+    const today = normalizeDate(new Date());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (isSameDay(date, today)) {
+    if (isSameDay(normalizedDate, today)) {
       return 'Today';
-    } else if (isSameDay(date, yesterday)) {
+    } else if (isSameDay(normalizedDate, yesterday)) {
       return 'Yesterday';
     } else {
-      return format(date, 'MMMM d, yyyy');
+      return format(normalizedDate, 'MMMM d, yyyy');
     }
   };
 
